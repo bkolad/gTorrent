@@ -12,7 +12,7 @@ type Info struct {
 	name         string
 }
 
-//Decoder decodeds bencoded tracker related data
+//Decoder decodeds tracker data
 type Decoder interface {
 	Decode() (*Info, error)
 }
@@ -35,23 +35,23 @@ func (dec *defaultDec) Decode() (*Info, error) {
 
 	dict, ok := ben.(*bDict)
 	if !ok {
-		return nil, errors.New("Torret content has to be bencoded dictionary")
+		return nil, errors.New("Torrent content has to be bencoded dictionary")
 	}
 
-	//====
+	//==== announce
 	announce, err := strValue(dict, "announce")
 	if err != nil {
 		return nil, err
 	}
 
-	//====
-	announceList, err := getAnnounceList(dict)
+	//==== announceList
+	announceList, err := announceList(dict)
 	if err != nil {
 		return nil, err
 	}
 
-	//====
-	info, err := getFromDict(dict, "info")
+	//==== info
+	info, err := fromDict(dict, "info")
 	infoDict, ok := info.(*bDict)
 	if !ok {
 		return nil, errors.New("-info- has to be bencoded dictionary")
@@ -61,19 +61,19 @@ func (dec *defaultDec) Decode() (*Info, error) {
 		return nil, err
 	}
 
-	//====
+	//==== pieceLength
 	pieceLength, err := intValue(infoDict, "piece length")
 	if err != nil {
 		return nil, err
 	}
 
-	//====
+	//==== length
 	length, err := intValue(infoDict, "length")
 	if err != nil {
 		return nil, err
 	}
 
-	//====
+	//==== name
 	name, err := strValue(infoDict, "name")
 	if err != nil {
 		return nil, err
@@ -88,8 +88,8 @@ func (dec *defaultDec) Decode() (*Info, error) {
 	}, err
 }
 
-func getAnnounceList(bencs *bDict) ([][]string, error) {
-	benValue, err := getFromDict(bencs, "announce-list")
+func announceList(bencs *bDict) ([][]string, error) {
+	benValue, err := fromDict(bencs, "announce-list")
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func getAnnounceList(bencs *bDict) ([][]string, error) {
 	for _, ls := range benList.value {
 		l, ok := ls.(*bList)
 		if !ok {
-			return nil, errors.New("announce-list entry has to be a list")
+			return nil, errors.New("wrong type, announce-list entry has to be list")
 		}
 		var internalList []string
 		for _, s := range l.value {
@@ -114,7 +114,7 @@ func getAnnounceList(bencs *bDict) ([][]string, error) {
 	return list, nil
 }
 
-func getFromDict(dict *bDict, key string) (Bencode, error) {
+func fromDict(dict *bDict, key string) (Bencode, error) {
 	value := dict.get(key)
 	if value == nil {
 		return nil, errors.New(key + " is missing in the dictionary")
@@ -123,28 +123,28 @@ func getFromDict(dict *bDict, key string) (Bencode, error) {
 }
 
 func intValue(dict *bDict, key string) (int, error) {
-	benLength, err := getFromDict(dict, key)
+	benLength, err := fromDict(dict, key)
 	if err != nil {
 		return 0, err
 	}
 
 	length, ok := benLength.(*bInt)
 	if !ok {
-		return 0, errors.New("-" + key + "- has to be int")
+		return 0, errors.New("wrong type, " + "-" + key + "- has to be int")
 	}
 
 	return length.value, nil
 }
 
 func strValue(dict *bDict, key string) (string, error) {
-	benName, err := getFromDict(dict, key)
+	benName, err := fromDict(dict, key)
 	if err != nil {
 		return "", err
 	}
 
 	name, ok := benName.(*bStr)
 	if !ok {
-		return "", errors.New("-" + key + "- has to be string")
+		return "", errors.New("wrong type, " + "-" + key + "- has to be string")
 	}
 
 	return name.value, nil

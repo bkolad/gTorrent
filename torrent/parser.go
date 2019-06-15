@@ -22,7 +22,7 @@ func parseError(benType string, err error, pos int) error {
 	return &ParseError{benType, pos, err}
 }
 
-//Parser parses bencoded data to Bencode
+//Parser parse bencoded data
 type Parser interface {
 	Parse() (Bencode, error)
 }

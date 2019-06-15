@@ -43,8 +43,8 @@ type bDict struct {
 	value map[bStr]Bencode
 }
 
-func (d *bDict) get(key string) Bencode {
-	return d.value[bStr{key}]
+func (ben *bDict) get(key string) Bencode {
+	return ben.value[bStr{key}]
 }
 
 func (ben *bDict) ToString() string {
