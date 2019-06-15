@@ -35,7 +35,7 @@ func (dec *defaultDec) Decode() (*Info, error) {
 
 	dict, ok := ben.(*bDict)
 	if !ok {
-		return nil, errors.New("Torrent content has to be bencoded dictionary")
+		return nil, wrongTypeError("Torrent content ", "dictionary")
 	}
 
 	//==== announce
@@ -54,7 +54,7 @@ func (dec *defaultDec) Decode() (*Info, error) {
 	info, err := fromDict(dict, "info")
 	infoDict, ok := info.(*bDict)
 	if !ok {
-		return nil, errors.New("-info- has to be bencoded dictionary")
+		return nil, wrongTypeError("info", "dictionary")
 	}
 
 	if err != nil {
@@ -96,14 +96,14 @@ func announceList(bencs *bDict) ([][]string, error) {
 
 	benList, ok := benValue.(*bList)
 	if !ok {
-		return nil, errors.New("announce-list has to be bencoded list of lists")
+		return nil, wrongTypeError("announce-list entry", "list of lists")
 	}
 
 	var list [][]string
 	for _, ls := range benList.value {
 		l, ok := ls.(*bList)
 		if !ok {
-			return nil, errors.New("wrong type, announce-list entry has to be list")
+			return nil, wrongTypeError("announce-list entry", "list")
 		}
 		var internalList []string
 		for _, s := range l.value {
@@ -130,7 +130,7 @@ func intValue(dict *bDict, key string) (int, error) {
 
 	length, ok := benLength.(*bInt)
 	if !ok {
-		return 0, errors.New("wrong type, " + "-" + key + "- has to be int")
+		return 0, wrongTypeError(key, "int")
 	}
 
 	return length.value, nil
@@ -144,8 +144,12 @@ func strValue(dict *bDict, key string) (string, error) {
 
 	name, ok := benName.(*bStr)
 	if !ok {
-		return "", errors.New("wrong type, " + "-" + key + "- has to be string")
+		return "", wrongTypeError(key, "string")
 	}
 
 	return name.value, nil
+}
+
+func wrongTypeError(str string, t string) error {
+	return errors.New("wrong type, " + "-" + str + "- has to be" + t)
 }
