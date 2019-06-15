@@ -119,7 +119,7 @@ func fromDict(dict *bDict, key string) (Bencode, error) {
 	if value == nil {
 		return nil, errors.New(key + " is missing in the dictionary")
 	}
-	return dict.get(key), nil
+	return value, nil
 }
 
 func intValue(dict *bDict, key string) (int, error) {
