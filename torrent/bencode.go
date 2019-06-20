@@ -41,6 +41,14 @@ type bList struct {
 	value []Bencode
 }
 
+func newList() *bList {
+	return &bList{}
+}
+
+func (ben *bList) append(elem Bencode) {
+	ben.value = append(ben.value, elem)
+}
+
 func (ben *bList) PrettyString() string {
 	var valuesStr []string
 	for _, v := range ben.value {
@@ -67,6 +75,15 @@ type bDict struct {
 
 func (ben *bDict) get(key string) Bencode {
 	return ben.value[bStr{key}]
+}
+
+func newDict() *bDict {
+	benMap := make(map[bStr]Bencode)
+	return &bDict{benMap}
+}
+
+func (ben *bDict) put(key bStr, value Bencode) {
+	ben.value[key] = value
 }
 
 func (ben *bDict) PrettyString() string {

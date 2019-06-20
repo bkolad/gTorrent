@@ -68,7 +68,7 @@ func (p *parser) parseStr() (Bencode, error) {
 
 //example: l...e -> li22ei78e3:dogi21ee -> [22,78,dog,21]
 func (p *parser) parseList() (Bencode, error) {
-	var list []Bencode
+	list := newList()
 	p.index++
 	for p.index < len(p.data) {
 		if p.data[p.index] == 'e' {
@@ -79,15 +79,14 @@ func (p *parser) parseList() (Bencode, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		list = append(list, bencode)
+		list.append(bencode)
 	}
-	return &bList{list}, nil
+	return list, nil
 }
 
 //example: dstr:ben str:ben -> d1:xi22e6:animal:3:doge -> {x:22, animal:dog}
 func (p *parser) parseDict() (Bencode, error) {
-	benMap := make(map[bStr]Bencode)
+	dict := newDict()
 	p.index++
 	for p.index < len(p.data) {
 		if p.data[p.index] == 'e' {
@@ -105,9 +104,9 @@ func (p *parser) parseDict() (Bencode, error) {
 		if err != nil {
 			return nil, err
 		}
-		benMap[bencodeKeyStr] = bencodeValue
+		dict.put(bencodeKeyStr, bencodeValue)
 	}
-	return &bDict{benMap}, nil
+	return dict, nil
 }
 
 func (p *parser) Parse() (Bencode, error) {
