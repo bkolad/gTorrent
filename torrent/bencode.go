@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/emirpasic/gods/maps/linkedhashmap"
 )
 
 //Bencode represents bencoded data
@@ -69,29 +71,53 @@ func (ben *bList) String() string {
 }
 
 type bDict struct {
-	//	"github.com/emirpasic/gods/maps/linkedhashmap"
-	value map[bStr]Bencode
+	value *linkedhashmap.Map
 }
 
 func (ben *bDict) get(key string) Bencode {
-	return ben.value[bStr{key}]
+	v, ok := ben.value.Get(bStr{key})
+	if !ok {
+		return nil
+	}
+	return v.(Bencode)
 }
 
 func newDict() *bDict {
-	benMap := make(map[bStr]Bencode)
-	return &bDict{benMap}
+	return &bDict{linkedhashmap.New()}
 }
 
 func (ben *bDict) put(key bStr, value Bencode) {
-	ben.value[key] = value
+	ben.value.Put(key, value)
+}
+
+type dictIter struct {
+	it linkedhashmap.Iterator
+}
+
+func (ben *bDict) iter() dictIter {
+	it := ben.value.Iterator()
+	return dictIter{it}
+}
+
+func (dI *dictIter) next() bool {
+	return dI.it.Next()
+}
+
+func (dI *dictIter) key() bStr {
+	return dI.it.Key().(bStr)
+}
+
+func (dI *dictIter) value() Bencode {
+	return dI.it.Value().(Bencode)
 }
 
 func (ben *bDict) PrettyString() string {
 	lineBreak := "\n"
 	var pairs []string
-	for k, v := range ben.value {
+	it := ben.iter()
+	for it.next() {
+		k, v := it.key(), it.value()
 		key := k.value
-
 		var value string
 		if key == "pieces" {
 			value = "..."
@@ -106,9 +132,11 @@ func (ben *bDict) PrettyString() string {
 func (ben *bDict) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("d")
-	for k, v := range ben.value {
-		buffer.WriteString(k.String())
-		buffer.WriteString(v.String())
+	it := ben.iter()
+	for it.next() {
+		key, value := it.key(), it.value()
+		buffer.WriteString(key.String())
+		buffer.WriteString(value.String())
 	}
 	buffer.WriteString("e")
 	return buffer.String()

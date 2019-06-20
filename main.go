@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 
 	"github.com/bkolad/gTorrent/torrent"
 )
@@ -18,12 +17,12 @@ const torrentContent = "d8:announce39:http://torrent.ubuntu.com:6969/announce" +
 	"6:pieces20:aaaaaaaaaaaaaaaaaaaaee"
 
 func main() {
-	data, err := ioutil.ReadFile("testData/Fedora-Live-Cinnamon-i686-23.torrent")
-	if err != nil {
-		fmt.Println("File reading error", err)
-		return
-	}
-	dec := torrent.NewDecoder(string(data))
+	//data, err := ioutil.ReadFile("testData/Fedora-Live-Cinnamon-i686-23.torrent")
+	//if err != nil {
+	//	fmt.Println("File reading error", err)
+	//	return
+	//}
+	dec := torrent.NewDecoder(torrentContent)
 	info, err := dec.Decode()
 
 	if err != nil {
