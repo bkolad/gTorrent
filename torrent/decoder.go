@@ -3,7 +3,6 @@ package torrent
 import (
 	"crypto/sha1"
 	"errors"
-	"fmt"
 	"io"
 )
 
@@ -41,7 +40,6 @@ func (dec *defaultDec) Decode() (*Info, error) {
 	p := NewParser(dec.str)
 
 	ben, err := p.Parse()
-	fmt.Println(ben.PrettyString())
 	if err != nil {
 		return nil, err
 	}
@@ -232,10 +230,12 @@ func pieceHashes(pieces string) ([][]byte, error) {
 	if len%20 != 0 {
 		return nil, errors.New("piece hash has to be 20 bytes long")
 	}
+
 	pieceHashes := make([][]byte, 0)
-	for i := 0; i < len-20; i += 20 {
+	for i := 0; i <= len-20; i += 20 {
 		pieceHashes = append(pieceHashes, []byte(pieces[i:i+20]))
 	}
+
 	return pieceHashes, nil
 }
 
