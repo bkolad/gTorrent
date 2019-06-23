@@ -18,10 +18,10 @@ const torrentContent = "d8:announce39:http://torrent.ubuntu.com:6969/announce" +
 
 func TestDecode(t *testing.T) {
 	dec := NewDecoder(torrentContent)
-	inf, err := dec.Decode()
+	decodedInfo, err := dec.Decode()
 	require.NoError(t, err)
-	i := info()
-	require.Equal(t, inf, i)
+	info := info()
+	require.Equal(t, decodedInfo, info)
 }
 
 func info() *Info {
