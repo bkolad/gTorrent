@@ -12,31 +12,31 @@ type file struct {
 }
 
 type Info struct {
-	announce     string
-	announceList [][]string
+	Announce     string
+	AnnounceList [][]string
 	pieceSize    int
 	length       int
 	name         string
 	files        []file
-	pieceHashes  [][]byte
+	PieceHashes  [][]byte
 	InfoHash     []byte
 }
 
-//Decoder decodeds tracker data
-type Decoder interface {
+//TorrentDecoder decodeds tracker data
+type TorrentDecoder interface {
 	Decode() (*Info, error)
 }
 
-type defaultDec struct {
+type torrentDec struct {
 	str string
 }
 
-//NewDecoder returns default decoder, holds the entire torrent file in memory.
-func NewDecoder(str string) Decoder {
-	return &defaultDec{str}
+//NewDecoder returns default torrent file decoder, holds the entire torrent file in memory.
+func NewTorrentDecoder(str string) TorrentDecoder {
+	return &torrentDec{str}
 }
 
-func (dec *defaultDec) Decode() (*Info, error) {
+func (dec *torrentDec) Decode() (*Info, error) {
 	p := NewParser(dec.str)
 
 	ben, err := p.Parse()
@@ -63,13 +63,13 @@ func (dec *defaultDec) Decode() (*Info, error) {
 
 	//==== info
 	info, err := fromDict(dict, "info")
+	if err != nil {
+		return nil, err
+	}
+
 	infoDict, ok := info.(*bDict)
 	if !ok {
 		return nil, wrongTypeError("info", "dictionary")
-	}
-
-	if err != nil {
-		return nil, err
 	}
 
 	//==== pieceLength
@@ -115,6 +115,7 @@ func (dec *defaultDec) Decode() (*Info, error) {
 	h := sha1.New()
 	io.WriteString(h, infoDictStr)
 	infoHash := h.Sum(nil)
+
 	return &Info{
 		announce,
 		announceList,
@@ -124,7 +125,8 @@ func (dec *defaultDec) Decode() (*Info, error) {
 		files,
 		pieceHash,
 		infoHash,
-	}, err
+	}, nil
+
 }
 
 func announceList(bencs *bDict) ([][]string, error) {

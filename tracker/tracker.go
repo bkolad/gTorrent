@@ -1,15 +1,8 @@
 package tracker
 
-type PeerInfo struct {
-}
+import "github.com/bkolad/gTorrent/torrent"
 
+//Tracker retrieves peers from the tracker
 type Tracker interface {
-	Peers() []PeerInfo
-}
-
-type tracker struct {
-}
-
-func (t *tracker) Peers() []PeerInfo {
-	return nil
+	Peers() ([]*torrent.PeerInfo, error)
 }

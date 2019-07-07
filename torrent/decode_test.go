@@ -17,7 +17,7 @@ const torrentContent = "d8:announce39:http://torrent.ubuntu.com:6969/announce" +
 	"6:pieces20:aaaaaaaaaaaaaaaaaaaaee"
 
 func TestDecode(t *testing.T) {
-	dec := NewDecoder(torrentContent)
+	dec := NewTorrentDecoder(torrentContent)
 	decodedInfo, err := dec.Decode()
 	require.NoError(t, err)
 	info := info()
@@ -26,8 +26,8 @@ func TestDecode(t *testing.T) {
 
 func info() *Info {
 	info := new(Info)
-	info.announce = "http://torrent.ubuntu.com:6969/announce"
-	info.announceList = [][]string{
+	info.Announce = "http://torrent.ubuntu.com:6969/announce"
+	info.AnnounceList = [][]string{
 		{"http://torrent.ubuntu.com:6969/announce"},
 		{"http://ipv6.torrent.ubuntu.com:6969/announce"},
 	}
@@ -41,7 +41,7 @@ func info() *Info {
 	for i := 0; i < 20; i++ {
 		pieceHashe = append(pieceHashe, 97)
 	}
-	info.pieceHashes = [][]byte{pieceHashe}
+	info.PieceHashes = [][]byte{pieceHashe}
 	info.pieceSize = 524288
 	return info
 }
