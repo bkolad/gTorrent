@@ -30,7 +30,8 @@ func main() {
 
 	peers, err := tracker.Peers()
 	if err != nil {
-		println(err)
+		fmt.Println(err)
+		//	return
 	}
 
 	for _, p := range peers {

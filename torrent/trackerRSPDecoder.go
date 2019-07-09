@@ -2,12 +2,14 @@ package torrent
 
 import (
 	"encoding/binary"
-	"fmt"
 	"net"
 )
 
 type RSP struct {
-	PeersInfo []*PeerInfo
+	PeersInfo  []*PeerInfo
+	complete   int
+	incomplete int
+	interval   int
 }
 
 type PeerInfo struct {
@@ -59,9 +61,13 @@ func (dec *trackerDec) Decode() (*RSP, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(complete, incomplete, interval)
-	peersInfo := parseIPAndPort(peers.PrettyString())
-	return &RSP{peersInfo}, nil
+
+	rsp := RSP{}
+	rsp.PeersInfo = parseIPAndPort(peers.PrettyString())
+	rsp.complete = complete
+	rsp.incomplete = incomplete
+	rsp.interval = interval
+	return &rsp, nil
 }
 
 func parseIPAndPort(peers string) []*PeerInfo {

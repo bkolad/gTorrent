@@ -29,17 +29,23 @@ func (t *httpTracker) Peers() ([]*torrent.PeerInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, errors.New("Can't reach http tracker " + t.url)
+	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	dec := torrent.NewTrackerRspDecoder(string(body))
+	bodyStr := string(body)
+	dec := torrent.NewTrackerRspDecoder(bodyStr)
 	rsp, err := dec.Decode()
 	if err != nil {
-		return nil, err
+		return nil, errors.New(bodyStr + " | " + err.Error())
 	}
 	return rsp.PeersInfo, nil
 }
@@ -51,7 +57,7 @@ func prepareURL(initState i.State, peerID string, port int, info *torrent.Info) 
 	}
 
 	params := url.Values{}
-	params.Add("info_hash", string(info.InfoHash))
+	params.Add("info_hash", "lol") //string(info.InfoHash))
 	params.Add("peer_id", peerID)
 	params.Add("port", strconv.Itoa(port))
 	params.Add("compact", "1")
