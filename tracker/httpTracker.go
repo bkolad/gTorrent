@@ -57,7 +57,7 @@ func prepareURL(initState i.State, peerID string, port int, info *torrent.Info) 
 	}
 
 	params := url.Values{}
-	params.Add("info_hash", "lol") //string(info.InfoHash))
+	params.Add("info_hash", string(info.InfoHash))
 	params.Add("peer_id", peerID)
 	params.Add("port", strconv.Itoa(port))
 	params.Add("compact", "1")
