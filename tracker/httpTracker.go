@@ -29,8 +29,13 @@ func (t *httpTracker) Peers() ([]*torrent.PeerInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	dec := torrent.NewTrackerRspDecoder(string(body))
 	rsp, err := dec.Decode()
 	if err != nil {
