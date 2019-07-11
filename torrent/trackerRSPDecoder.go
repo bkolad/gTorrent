@@ -14,7 +14,7 @@ type RSP struct {
 
 type PeerInfo struct {
 	IP   string
-	Port int
+	Port uint16
 }
 
 type TrackerRSPDecoder interface {
@@ -72,10 +72,10 @@ func (dec *trackerDec) Decode() (*RSP, error) {
 
 func parseIPAndPort(peers string) []*PeerInfo {
 	var peerInfos []*PeerInfo
-	for i := 0; i < len(peers)-6; i = i + 6 {
+	for i := 0; i <= len(peers)-6; i = i + 6 {
 		addr := peers[i : i+6]
 		ip := net.IPv4(addr[0], addr[1], addr[2], addr[3])
-		port := int(binary.BigEndian.Uint16([]byte(addr[4:6])))
+		port := binary.BigEndian.Uint16([]byte(addr[4:6]))
 		peerInfo := &PeerInfo{ip.String(), port}
 		peerInfos = append(peerInfos, peerInfo)
 	}

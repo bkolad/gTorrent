@@ -28,13 +28,13 @@ func main() {
 
 	tracker, _ := tracker.NewTracker(info, initState, conf)
 
-	peers, err := tracker.Peers()
+	_, err = tracker.Peers()
 	if err != nil {
 		fmt.Println(err)
 		//	return
 	}
 
-	for _, p := range peers {
-		fmt.Println(p.IP, p.Port)
-	}
+	//	for _, p := range peers {
+	//		fmt.Println(p.IP, p.Port)
+	//}
 }
