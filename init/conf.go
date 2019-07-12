@@ -1,11 +1,13 @@
 package init
 
+// Configuration of the local peer.
 type Configuration struct {
 	Port        int
 	PeerID      string
 	TorrentPath string
 }
 
+// NewConf creates default configuration.
 func NewConf() Configuration {
 	c := Configuration{}
 	c.Port = 6881

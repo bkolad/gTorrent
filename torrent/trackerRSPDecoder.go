@@ -5,6 +5,7 @@ import (
 	"net"
 )
 
+// RSP is response from the tracker containing informations about remote peers.
 type RSP struct {
 	PeersInfo  []*PeerInfo
 	complete   int
@@ -12,11 +13,13 @@ type RSP struct {
 	interval   int
 }
 
+// PeerInfo holds information about remote peer.
 type PeerInfo struct {
 	IP   string
 	Port uint16
 }
 
+// Decoder for bencoded tracker response.
 type TrackerRSPDecoder interface {
 	Decode() (*RSP, error)
 }
@@ -25,6 +28,7 @@ type trackerDec struct {
 	str string
 }
 
+// NewTrackerRspDecoder
 func NewTrackerRspDecoder(str string) TrackerRSPDecoder {
 	return &trackerDec{str}
 }

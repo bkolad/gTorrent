@@ -11,6 +11,7 @@ type file struct {
 	path   []string
 }
 
+// Info represents content of the torrent file.
 type Info struct {
 	Announce     string
 	AnnounceList [][]string
@@ -31,7 +32,8 @@ type torrentDec struct {
 	str string
 }
 
-//NewDecoder returns default torrent file decoder, holds the entire torrent file in memory.
+// NewTorrentDecoder returns default torrent file decoder
+// which holds the entire torrent file in memory.
 func NewTorrentDecoder(str string) TorrentDecoder {
 	return &torrentDec{str}
 }
@@ -80,6 +82,7 @@ func (dec *torrentDec) Decode() (*Info, error) {
 
 	//==== length
 	length, isSingleFile, err := intValue(infoDict, "length")
+
 	//if length is absent then we have multifile torrent
 	if isSingleFile && err != nil {
 		return nil, err
@@ -97,10 +100,12 @@ func (dec *torrentDec) Decode() (*Info, error) {
 		return nil, err
 	}
 
+	// files slice is nil only for single file torrents.
 	if files == nil && !isSingleFile {
 		return nil, errors.New("No files to download in the torrent file")
 	}
 
+	//==== pieces
 	pieces, err := strValue(infoDict, "pieces")
 	if err != nil {
 		return nil, err
