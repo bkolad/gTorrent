@@ -6,6 +6,8 @@ import (
 
 	i "github.com/bkolad/gTorrent/init"
 
+	"github.com/bkolad/gTorrent/network"
+	p "github.com/bkolad/gTorrent/peer"
 	"github.com/bkolad/gTorrent/torrent"
 	"github.com/bkolad/gTorrent/tracker"
 )
@@ -28,13 +30,15 @@ func main() {
 
 	tracker, _ := tracker.NewTracker(info, initState, conf)
 
-	_, err = tracker.Peers()
+	peers, err := tracker.Peers()
 	if err != nil {
 		fmt.Println(err)
-		//	return
+		return
 	}
 
-	//	for _, p := range peers {
-	//		fmt.Println(p.IP, p.Port)
-	//}
+	h := p.NewHandshake(conf, info)
+
+	net := network.NewNetwork(peers[0], h)
+	net.Send()
+
 }
