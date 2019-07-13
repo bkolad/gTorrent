@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	i "github.com/bkolad/gTorrent/init"
+	log "github.com/bkolad/gTorrent/logger"
 	"github.com/bkolad/gTorrent/torrent"
 )
 
@@ -25,6 +26,8 @@ func NewTracker(info *torrent.Info, initState i.State, conf i.Configuration) (Tr
 }
 
 func (t *httpTracker) Peers() ([]*torrent.PeerInfo, error) {
+	log.Default.Debug("Fetching peers from the tracker: " + t.url)
+
 	resp, err := http.Get(t.url)
 	if err != nil {
 		return nil, err
@@ -47,6 +50,8 @@ func (t *httpTracker) Peers() ([]*torrent.PeerInfo, error) {
 	if err != nil {
 		return nil, errors.New(bodyStr + " | " + err.Error())
 	}
+	log.Default.Info(strconv.Itoa(len(rsp.PeersInfo)) + " peers recived from the tracker")
+
 	return rsp.PeersInfo, nil
 }
 

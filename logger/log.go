@@ -9,7 +9,7 @@ import (
 
 type Logger interface {
 	Info(msg string)
-	//Debug()
+	Debug(msg string)
 	//Warn()
 	//Error()
 }
@@ -26,4 +26,8 @@ type zerolog struct {
 
 func (z zerolog) Info(msg string) {
 	log.Info().Msg(msg)
+}
+
+func (z zerolog) Debug(msg string) {
+	log.Debug().Msg(msg)
 }

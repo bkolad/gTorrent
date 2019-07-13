@@ -18,6 +18,8 @@ func main() {
 	log.Default.Info("Starting gTorrent..")
 	conf := i.NewConf()
 	initState := i.NewInitState()
+	log.Default.Debug("Local peer ID: " + conf.PeerID)
+
 	data, err := ioutil.ReadFile(conf.TorrentPath)
 	if err != nil {
 		fmt.Println("File reading error", err)
@@ -25,7 +27,6 @@ func main() {
 	}
 	dec := torrent.NewTorrentDecoder(string(data))
 	info, err := dec.Decode()
-
 	if err != nil {
 		fmt.Println(err)
 		return
