@@ -6,6 +6,7 @@ import (
 
 	i "github.com/bkolad/gTorrent/init"
 
+	log "github.com/bkolad/gTorrent/logger"
 	"github.com/bkolad/gTorrent/network"
 	p "github.com/bkolad/gTorrent/peer"
 	"github.com/bkolad/gTorrent/torrent"
@@ -13,6 +14,8 @@ import (
 )
 
 func main() {
+
+	log.Default.Info("Starting gTorrent..")
 	conf := i.NewConf()
 	initState := i.NewInitState()
 	data, err := ioutil.ReadFile(conf.TorrentPath)

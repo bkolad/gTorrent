@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -45,11 +44,12 @@ func (n *network) Send() {
 	var buf [68]byte
 	_, _ = io.ReadFull(conn, buf[:])
 
-	handshakeFromPeer, err := peer.Decode(buf[:])
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("handshake", handshakeFromPeer)
+	//handshakeFromPeer, err := peer.Decode(buf[:])
+	//if err != nil {
+	//	panic(err)
+	//}
+
+	//log.Default.Info("handshake ")
 
 }
 
