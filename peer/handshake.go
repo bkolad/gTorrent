@@ -3,6 +3,7 @@ package peer
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 
 	i "github.com/bkolad/gTorrent/init"
 	"github.com/bkolad/gTorrent/torrent"
@@ -10,6 +11,7 @@ import (
 
 const protocol = "BitTorrent protocol"
 
+//Bittorent protocol handshake
 type Handshake struct {
 	len      uint8
 	protocol string
@@ -28,7 +30,8 @@ func NewHandshake(conf i.Configuration, info *torrent.Info) *Handshake {
 	return &h
 }
 
-func (h Handshake) Encode() ([]byte, error) {
+//Encode serializes Hnadshake to byte array
+func (h *Handshake) Encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	if err := binary.Write(buf, binary.BigEndian, h.len); err != nil {
@@ -54,12 +57,18 @@ func (h Handshake) Encode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func Decode(data []byte) (Handshake, error) {
-	var h Handshake
+//Decode converts byte array to Handshake struct
+func (h *Handshake) Decode(data []byte) error {
+	if len(data) != 68 {
+		return errors.New("Handshake must be 68 bytes long")
+	}
 	h.len = uint8(data[0])
 	h.protocol = string(data[1:20])
+	if h.protocol != protocol {
+		return errors.New("Only BitTorrent protocol is supported")
+	}
 	h.rsvd = data[20:28]
 	h.InfoHash = data[28:48]
 	h.peerID = string(data[48:68])
-	return h, nil
+	return nil
 }

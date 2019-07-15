@@ -17,7 +17,8 @@ func TestHandshake(t *testing.T) {
 
 	data, err := handshake.Encode()
 	require.NoError(t, err)
-	decodedHandshake, err := Decode(data)
+	var decodedHandshake Handshake
+	err = decodedHandshake.Decode(data)
 	require.NoError(t, err)
 	require.Equal(t, handshake, decodedHandshake)
 }
