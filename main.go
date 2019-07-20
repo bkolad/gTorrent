@@ -5,10 +5,9 @@ import (
 	"io/ioutil"
 
 	i "github.com/bkolad/gTorrent/init"
+	"github.com/bkolad/gTorrent/peer"
 
 	log "github.com/bkolad/gTorrent/logger"
-	"github.com/bkolad/gTorrent/network"
-	p "github.com/bkolad/gTorrent/peer"
 	"github.com/bkolad/gTorrent/torrent"
 	"github.com/bkolad/gTorrent/tracker"
 )
@@ -40,9 +39,21 @@ func main() {
 		return
 	}
 
-	h := p.NewHandshake(conf, info)
+	peerInfoChan := make(chan torrent.PeerInfo, 100)
+	go func() {
+		fmt.Println("put peers")
+		for _, p := range peers {
+			fmt.Println("x")
+			peerInfoChan <- p
+		}
+	}()
+	h := peer.NewHandshake(conf, info)
+	peerManager := peer.NewManager(peerInfoChan, h)
+	go peerManager.ConnectToPeers()
 
-	net := network.NewNetwork(peers[0], h)
-	net.Send()
+	//	h := p.NewHandshake(conf, info)
 
+	//	net := network.NewNetwork(peers[0], h)
+	//	net.Send()
+	select {}
 }

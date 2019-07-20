@@ -7,7 +7,7 @@ import (
 
 // RSP is response from the tracker containing informations about remote peers.
 type RSP struct {
-	PeersInfo  []*PeerInfo
+	PeersInfo  []PeerInfo
 	complete   int
 	incomplete int
 	interval   int
@@ -74,13 +74,13 @@ func (dec *trackerDec) Decode() (*RSP, error) {
 	return &rsp, nil
 }
 
-func parseIPAndPort(peers string) []*PeerInfo {
-	var peerInfos []*PeerInfo
+func parseIPAndPort(peers string) []PeerInfo {
+	var peerInfos []PeerInfo
 	for i := 0; i <= len(peers)-6; i = i + 6 {
 		addr := peers[i : i+6]
 		ip := net.IPv4(addr[0], addr[1], addr[2], addr[3])
 		port := binary.BigEndian.Uint16([]byte(addr[4:6]))
-		peerInfo := &PeerInfo{ip.String(), port}
+		peerInfo := PeerInfo{ip.String(), port}
 		peerInfos = append(peerInfos, peerInfo)
 	}
 	return peerInfos

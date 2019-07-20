@@ -1,17 +1,17 @@
-package network
+package peer
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"strconv"
 	"time"
 
-	"github.com/bkolad/gTorrent/peer"
 	"github.com/bkolad/gTorrent/torrent"
 )
 
 type Network interface {
-	Send()
+	SendHandshake()
 	RegisterListener(Listener)
 }
 
@@ -21,16 +21,16 @@ type Listener interface {
 
 type network struct {
 	peerInfo *torrent.PeerInfo
-	h        *peer.Handshake
+	h        Handshake
 }
 
-const dialerTimeOut = 10 * time.Second
+const dialerTimeOut = 20 * time.Second
 
-func NewNetwork(peerInfo *torrent.PeerInfo, h *peer.Handshake) Network {
+func NewNetwork(peerInfo *torrent.PeerInfo, h Handshake) Network {
 	return &network{peerInfo, h}
 }
 
-func (n *network) Send() {
+func (n *network) SendHandshake() {
 	addr := net.JoinHostPort(n.peerInfo.IP, strconv.Itoa(int(n.peerInfo.Port)))
 	dialer := net.Dialer{Timeout: dialerTimeOut}
 	conn, err := dialer.Dial("tcp", addr)
@@ -48,12 +48,13 @@ func (n *network) Send() {
 	var buf [68]byte
 	_, _ = io.ReadFull(conn, buf[:])
 
-	//handshakeFromPeer, err := peer.Decode(buf[:])
-	//if err != nil {
-	//	panic(err)
-	//}
+	var handshakeFromPeer Handshake
+	err = handshakeFromPeer.Decode(buf[:])
+	if err != nil {
+		panic(err)
+	}
 
-	//log.Default.Info("handshake ")
+	fmt.Println("handshake ", handshakeFromPeer)
 
 }
 

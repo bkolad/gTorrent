@@ -28,7 +28,7 @@ func NewTracker(info *torrent.Info, initState i.State, conf i.Configuration) (Tr
 	return &httpTracker{url}, nil
 }
 
-func (t *httpTracker) Peers() ([]*torrent.PeerInfo, error) {
+func (t *httpTracker) Peers() ([]torrent.PeerInfo, error) {
 	log.Default.Debug("Fetching peers from the tracker: " + t.url)
 
 	client := &http.Client{
