@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/bkolad/gTorrent/peer"
 	"github.com/bkolad/gTorrent/torrent"
@@ -23,13 +24,16 @@ type network struct {
 	h        *peer.Handshake
 }
 
+const dialerTimeOut = 10 * time.Second
+
 func NewNetwork(peerInfo *torrent.PeerInfo, h *peer.Handshake) Network {
 	return &network{peerInfo, h}
 }
 
 func (n *network) Send() {
 	addr := net.JoinHostPort(n.peerInfo.IP, strconv.Itoa(int(n.peerInfo.Port)))
-	conn, err := net.Dial("tcp", addr)
+	dialer := net.Dialer{Timeout: dialerTimeOut}
+	conn, err := dialer.Dial("tcp", addr)
 
 	if err != nil {
 		panic(err)

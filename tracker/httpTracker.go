@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	i "github.com/bkolad/gTorrent/init"
 	log "github.com/bkolad/gTorrent/logger"
@@ -15,6 +16,8 @@ import (
 type httpTracker struct {
 	url string
 }
+
+const httpTimeout = 10 * time.Second
 
 //NewTracker creates default tracker
 func NewTracker(info *torrent.Info, initState i.State, conf i.Configuration) (Tracker, error) {
@@ -28,7 +31,11 @@ func NewTracker(info *torrent.Info, initState i.State, conf i.Configuration) (Tr
 func (t *httpTracker) Peers() ([]*torrent.PeerInfo, error) {
 	log.Default.Debug("Fetching peers from the tracker: " + t.url)
 
-	resp, err := http.Get(t.url)
+	client := &http.Client{
+		Timeout: httpTimeout,
+	}
+	resp, err := client.Get(t.url)
+
 	if err != nil {
 		return nil, err
 	}
