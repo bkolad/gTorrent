@@ -9,8 +9,9 @@ type peer struct {
 	net  Network
 }
 
-//TODO add listener
-
 func (p peer) doHandshake() {
-	p.net.SendHandshake()
+	err := p.net.SendHandshake()
+	if err != nil {
+		p.msgs <- handshakeError{}
+	}
 }

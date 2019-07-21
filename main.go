@@ -14,10 +14,10 @@ import (
 
 func main() {
 
-	log.Default.Info("Starting gTorrent..")
+	log.Info("Starting gTorrent..")
 	conf := i.NewConf()
 	initState := i.NewInitState()
-	log.Default.Debug("Local peer ID: " + conf.PeerID)
+	log.Debug("Local peer ID: " + conf.PeerID)
 
 	data, err := ioutil.ReadFile(conf.TorrentPath)
 	if err != nil {
@@ -41,16 +41,13 @@ func main() {
 
 	peerInfoChan := make(chan torrent.PeerInfo, 100)
 	go func() {
-		fmt.Println("put peers")
 		for _, p := range peers {
-			fmt.Println("x")
 			peerInfoChan <- p
 		}
 	}()
 	h := peer.NewHandshake(conf, info)
 	peerManager := peer.NewManager(peerInfoChan, h)
 	go peerManager.ConnectToPeers()
-
 	//	h := p.NewHandshake(conf, info)
 
 	//	net := network.NewNetwork(peers[0], h)

@@ -65,7 +65,7 @@ func (h *Handshake) Decode(data []byte) error {
 	h.len = uint8(data[0])
 	h.protocol = string(data[1:20])
 	if h.protocol != protocol {
-		return errors.New("Only BitTorrent protocol is supported")
+		return errors.New("Protocol not supported -" + h.protocol)
 	}
 	h.rsvd = data[20:28]
 	h.InfoHash = data[28:48]
