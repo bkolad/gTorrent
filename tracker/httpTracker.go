@@ -28,8 +28,8 @@ func NewTracker(info *torrent.Info, initState i.State, conf i.Configuration) (Tr
 	return &httpTracker{url}, nil
 }
 
-func (t *httpTracker) Peers() ([]*torrent.PeerInfo, error) {
-	log.Default.Debug("Fetching peers from the tracker: " + t.url)
+func (t *httpTracker) Peers() ([]torrent.PeerInfo, error) {
+	log.Debug("Fetching peers from the tracker: " + t.url)
 
 	client := &http.Client{
 		Timeout: httpTimeout,
@@ -57,7 +57,7 @@ func (t *httpTracker) Peers() ([]*torrent.PeerInfo, error) {
 	if err != nil {
 		return nil, errors.New(bodyStr + " | " + err.Error())
 	}
-	log.Default.Info(strconv.Itoa(len(rsp.PeersInfo)) + " peers recived from the tracker")
+	log.Info(strconv.Itoa(len(rsp.PeersInfo)) + " peers recived from the tracker")
 
 	return rsp.PeersInfo, nil
 }

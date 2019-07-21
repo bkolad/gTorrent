@@ -25,7 +25,7 @@ func TestParseIPAndPort(t *testing.T) {
 
 	parsedInfos := parseIPAndPort(string(buf.Bytes()))
 	for i := range peerInfos {
-		require.Equal(t, *parsedInfos[i], peerInfos[i])
+		require.Equal(t, parsedInfos[i], peerInfos[i])
 	}
 }
 
@@ -89,9 +89,9 @@ func testFailure(t *testing.T, test testCase) {
 	require.Error(t, err)
 }
 
-func contains(allPeerInfo []*PeerInfo, peerInfo PeerInfo) bool {
+func contains(allPeerInfo []PeerInfo, peerInfo PeerInfo) bool {
 	for _, pi := range allPeerInfo {
-		if *pi == peerInfo {
+		if pi == peerInfo {
 			return true
 		}
 	}

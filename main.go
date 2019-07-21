@@ -5,20 +5,19 @@ import (
 	"io/ioutil"
 
 	i "github.com/bkolad/gTorrent/init"
+	"github.com/bkolad/gTorrent/peer"
 
 	log "github.com/bkolad/gTorrent/logger"
-	"github.com/bkolad/gTorrent/network"
-	p "github.com/bkolad/gTorrent/peer"
 	"github.com/bkolad/gTorrent/torrent"
 	"github.com/bkolad/gTorrent/tracker"
 )
 
 func main() {
 
-	log.Default.Info("Starting gTorrent..")
+	log.Info("Starting gTorrent..")
 	conf := i.NewConf()
 	initState := i.NewInitState()
-	log.Default.Debug("Local peer ID: " + conf.PeerID)
+	log.Debug("Local peer ID: " + conf.PeerID)
 
 	data, err := ioutil.ReadFile(conf.TorrentPath)
 	if err != nil {
@@ -40,9 +39,18 @@ func main() {
 		return
 	}
 
-	h := p.NewHandshake(conf, info)
+	peerInfoChan := make(chan torrent.PeerInfo, 100)
+	go func() {
+		for _, p := range peers {
+			peerInfoChan <- p
+		}
+	}()
+	h := peer.NewHandshake(conf, info)
+	peerManager := peer.NewManager(peerInfoChan, h)
+	go peerManager.ConnectToPeers()
+	//	h := p.NewHandshake(conf, info)
 
-	net := network.NewNetwork(peers[0], h)
-	net.Send()
-
+	//	net := network.NewNetwork(peers[0], h)
+	//	net.Send()
+	select {}
 }
