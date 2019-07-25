@@ -15,8 +15,8 @@ type file struct {
 type Info struct {
 	Announce     string
 	AnnounceList [][]string
-	pieceSize    int
-	length       int
+	PieceSize    int
+	Length       int
 	name         string
 	files        []file
 	PieceHashes  [][]byte

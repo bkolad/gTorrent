@@ -30,7 +30,8 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-
+	fmt.Println("Pieces:", info.Length)
+	fmt.Println("Pieces Size:", info.PieceSize)
 	tracker, _ := tracker.NewTracker(info, initState, conf)
 
 	peers, err := tracker.Peers()
