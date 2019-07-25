@@ -32,7 +32,7 @@ func info() *Info {
 		{"http://ipv6.torrent.ubuntu.com:6969/announce"},
 	}
 	info.files = nil
-	info.length = 1
+	info.Length = 1
 	info.InfoHash =
 		[]byte{98, 194, 202, 18, 139, 80, 209, 76, 165,
 			195, 230, 13, 19, 178, 186, 49, 28, 102, 203, 88}
@@ -42,6 +42,6 @@ func info() *Info {
 		pieceHashe = append(pieceHashe, 97)
 	}
 	info.PieceHashes = [][]byte{pieceHashe}
-	info.pieceSize = 524288
+	info.PieceSize = 524288
 	return info
 }

@@ -57,7 +57,7 @@ func (t *httpTracker) Peers() ([]torrent.PeerInfo, error) {
 	if err != nil {
 		return nil, errors.New(bodyStr + " | " + err.Error())
 	}
-	log.Info(strconv.Itoa(len(rsp.PeersInfo)) + " peers recived from the tracker")
+	log.Info(strconv.Itoa(len(rsp.PeersInfo)) + " peers received from the tracker")
 
 	return rsp.PeersInfo, nil
 }

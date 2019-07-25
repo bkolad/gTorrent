@@ -13,13 +13,13 @@ type Manager interface {
 
 type manager struct {
 	peersInfo   chan torrent.PeerInfo
-	activePeers map[torrent.PeerInfo]controller
+	activePeers map[torrent.PeerInfo]Peer
 	messages    chan MSG
 	handshake   Handshake
 }
 
 func NewManager(peerInfoChan chan torrent.PeerInfo, handshake Handshake) Manager {
-	activePeers := make(map[torrent.PeerInfo]controller)
+	activePeers := make(map[torrent.PeerInfo]Peer)
 	messages := make(chan MSG, 100)
 	return &manager{peerInfoChan, activePeers, messages, handshake}
 }
@@ -29,9 +29,9 @@ func (m *manager) ConnectToPeers() {
 		for p := range m.peersInfo {
 			if len(m.activePeers) < maxActivePeers {
 				log.Info("connecting to peer " + p.IP)
-				peerController := newController(m.messages, p, m.handshake)
-				go peerController.start()
-				m.activePeers[p] = peerController
+				peer := newPeer(m.messages, p, m.handshake)
+				go peer.start()
+				m.activePeers[p] = peer
 			} else {
 				break
 			}
