@@ -90,20 +90,24 @@ func (n *network) SendHandshake() error {
 
 	go func() {
 		for {
-			n.handleConn()
+			err := n.handleConn()
+			if err != nil {
+				return
+			}
 		}
 	}()
 	return nil
 }
 
-func (n *network) handleConn() {
+func (n *network) handleConn() error {
 	packet := &packet{}
 	err := packet.Decode(n.conn)
 	if err != nil {
 		log.Info("Packet from " + n.peerInfo.IP + " can't be decoded " + err.Error())
-		return
+		return err
 	}
 	n.dispatch(packet)
+	return nil
 }
 
 func (n *network) dispatch(p Packet) {
@@ -114,6 +118,9 @@ func (n *network) dispatch(p Packet) {
 
 func (n *network) Send(p Packet) error {
 	_, err := n.conn.Write(p.Encode())
+	if err != nil {
+		log.Error(err.Error())
+	}
 	return err
 }
 

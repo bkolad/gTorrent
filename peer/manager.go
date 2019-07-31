@@ -5,7 +5,7 @@ import (
 	"github.com/bkolad/gTorrent/torrent"
 )
 
-const maxActivePeers = 10
+const maxActivePeers = 30
 
 type Manager interface {
 	ConnectToPeers()
