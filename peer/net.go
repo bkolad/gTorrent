@@ -117,11 +117,19 @@ func (n *network) dispatch(p Packet) {
 }
 
 func (n *network) Send(p Packet) error {
-	_, err := n.conn.Write(p.Encode())
+	wireEncodedPacket, err := p.Encode()
 	if err != nil {
 		log.Error(err.Error())
+		return err
 	}
-	return err
+
+	_, err = n.conn.Write(wireEncodedPacket)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+
+	}
+	return nil
 }
 
 func (n *network) RegisterListener(l Listener) {

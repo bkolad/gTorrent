@@ -5,11 +5,8 @@ import (
 	"encoding/binary"
 )
 
-//type msgId int
-
 const (
-	keepAlaive = iota - 1
-	choke
+	choke = iota
 	unchoke
 	interested
 	notInterested
@@ -20,6 +17,9 @@ const (
 	cancel
 	port
 	unknown
+	// keepAlaive is a special message in the protocol and it doesn't have message id
+	// here we reserve 255 for it, and hanle it like any other message.
+	keepAlaive = 255
 )
 
 func decodePiece(payload []byte) (uint32, uint32, []byte) {
@@ -35,6 +35,13 @@ func encodePieceRequest(piece, offset, size uint32) Packet {
 	binary.Write(b, binary.BigEndian, size)
 	packet := &packet{id: request, payload: b.Bytes()}
 	return packet
+}
+
+func decodeRequest(payload []byte) (uint32, uint32, uint32) {
+	piece := binary.BigEndian.Uint32(payload[0:4])
+	offset := binary.BigEndian.Uint32(payload[4:8])
+	size := binary.BigEndian.Uint32(payload[8:12])
+	return piece, offset, size
 }
 
 func encodeHave(bitfield []byte) Packet {

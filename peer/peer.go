@@ -8,6 +8,11 @@ import (
 	"github.com/bkolad/gTorrent/torrent"
 )
 
+// Peer handels messages form other bittorent nodes.
+// - requests new pieces
+// - serves pieces which are available to the local peer
+// - tracks who has what content
+// ... see BitTorrent spec: https://www.bittorrent.org/beps/bep_0003.html
 type Peer interface {
 	start()
 	onChoke()
@@ -16,7 +21,7 @@ type Peer interface {
 	onNotInterested()
 	onHave([]byte)
 	onBitfield([]byte)
-	onRequest()
+	onRequest(uint32, uint32, uint32)
 	onPiece(uint32, uint32, []byte)
 	onCancel()
 	onPort()
@@ -47,6 +52,8 @@ func (p *simplePeer) start() {
 }
 
 func (p *simplePeer) onKeepAlive() {
+	log.Debug("keep alive")
+
 }
 
 func (p *simplePeer) onChoke() {
@@ -80,7 +87,7 @@ func (p *simplePeer) onBitfield(bitfield []byte) {
 	p.send(packet)
 }
 
-func (p *simplePeer) onRequest() {
+func (p *simplePeer) onRequest(piece, offset, size uint32) {
 
 }
 
@@ -105,7 +112,7 @@ func (p *simplePeer) send(packet Packet) {
 }
 
 func (p *simplePeer) NewPacket(packet Packet) {
-	switch int(packet.ID()) {
+	switch packet.ID() {
 	case keepAlaive:
 		p.onKeepAlive()
 	case choke:
@@ -121,10 +128,9 @@ func (p *simplePeer) NewPacket(packet Packet) {
 	case bitfield:
 		p.onBitfield(packet.Payload())
 	case request:
-		p.onRequest()
+		p.onRequest(decodeRequest(packet.Payload()))
 	case piece:
-		piece, offset, data := decodePiece(packet.Payload())
-		p.onPiece(piece, offset, data)
+		p.onPiece(decodePiece(packet.Payload()))
 	case cancel:
 		p.onCancel()
 	case port:

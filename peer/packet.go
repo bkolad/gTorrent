@@ -5,13 +5,12 @@ import (
 	"encoding/binary"
 	"io"
 	"reflect"
-
-	log "github.com/bkolad/gTorrent/logger"
 )
 
+//Packet represents message received/send from/to the network
 type Packet interface {
 	Decode(reader io.Reader) error
-	Encode() []byte
+	Encode() ([]byte, error)
 	ID() byte
 	Payload() []byte
 }
@@ -33,9 +32,10 @@ func (p *packet) Decode(reader io.Reader) error {
 		return err
 	}
 
+	// keepAlive is message with length 0 and no id
 	keepAlaiveMassage := []byte{0, 0, 0, 0}
 	if reflect.DeepEqual(lenBuf, keepAlaiveMassage) {
-		log.Info("Keep alive recieved")
+		p.id = keepAlaive
 		return nil
 	}
 	idBuf := make([]byte, 1)
@@ -44,31 +44,37 @@ func (p *packet) Decode(reader io.Reader) error {
 	if err != nil {
 		return err
 	}
+	p.id = idBuf[0]
 
-	numBytes := binary.BigEndian.Uint32(lenBuf)
-	size := numBytes - 1
-	payload := make([]byte, size)
+	// Payload length is the total length withoud the "id" byte
+	numBytes := binary.BigEndian.Uint32(lenBuf) - 1
+	payload := make([]byte, numBytes)
 	_, err = io.ReadFull(reader, payload)
 	if err != nil {
 		return err
 	}
-	p.id = idBuf[0]
 	p.payload = payload
 	return nil
 }
 
-func (p *packet) Encode() []byte {
-	var b bytes.Buffer
+func (p *packet) Encode() ([]byte, error) {
+	var buffer bytes.Buffer
 	lenBuf := make([]byte, 4)
 	payloadLen := len(p.Payload())
+	// Total length is payload length + 1 (for id byte)
 	binary.BigEndian.PutUint32(lenBuf, uint32(1+payloadLen))
-	b.Write(lenBuf)
-	b.Write([]byte{p.id})
-	if payloadLen != 0 {
-		b.Write(p.Payload())
+	_, err := buffer.Write(lenBuf)
+	if err != nil {
+		return nil, err
 	}
-
-	return b.Bytes()
+	_, err = buffer.Write([]byte{p.id})
+	if err != nil {
+		return nil, err
+	}
+	if payloadLen != 0 {
+		buffer.Write(p.Payload())
+	}
+	return buffer.Bytes(), nil
 }
 
 func (p *packet) ID() byte {
