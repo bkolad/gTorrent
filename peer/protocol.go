@@ -18,7 +18,7 @@ const (
 	port
 	unknown
 	// keepAlaive is a special message in the protocol and it doesn't have message id
-	// here we reserve 255 for it, and hanle it like any other message.
+	// here we reserve 255 for it, and handle it like any other message.
 	keepAlaive = 255
 )
 
