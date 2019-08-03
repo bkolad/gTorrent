@@ -51,3 +51,36 @@ func encodeHave(bitfield []byte) Packet {
 func encodeInterested() Packet {
 	return &packet{id: interested, payload: nil}
 }
+
+func haveToIndex(bytes []byte) uint32 {
+	index := binary.BigEndian.Uint32(bytes)
+	return index
+}
+
+func bytesToBits(bytes []byte) []bool {
+	bitSet := make([]bool, 0)
+	for _, b := range bytes {
+		for i := 0; i < 8; i++ {
+			val := b & (1 << uint(i))
+			hasBit := val > 0
+			bitSet = append(bitSet, hasBit)
+		}
+	}
+	return bitSet
+}
+
+func bitsToBytes(bits []bool) []byte {
+	var bytes []byte
+	for i := 0; i < len(bits)/8; i++ {
+		var result byte
+		oneByte := bits[8*i : 8*i+8]
+		for k, b := range oneByte {
+			if b {
+				result = result + (1 << uint(k))
+			}
+		}
+		bytes = append(bytes, result)
+		result = 0
+	}
+	return bytes
+}

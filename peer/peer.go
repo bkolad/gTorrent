@@ -30,14 +30,14 @@ type Peer interface {
 }
 
 type simplePeer struct {
-	msgs          chan MSG
-	net           Network
-	chocked       bool
-	bitfield      []byte
-	interested    bool
-	pieceManager  p.Manager
-	currentPiece  []byte
-	currentOffset int
+	msgs             chan MSG
+	net              Network
+	chocked          bool
+	remotePeerPieces []bool
+	interested       bool
+	pieceManager     p.Manager
+	currentPiece     []byte
+	currentOffset    int
 }
 
 func newPeer(messages chan MSG,
@@ -86,12 +86,14 @@ func (p *simplePeer) onNotInterested() {
 
 func (p *simplePeer) onHave(payload []byte) {
 	log.Debug("have")
+	idx := haveToIndex(payload)
+	p.remotePeerPieces[idx] = true
 	packet := encodeInterested()
 	p.send(packet)
 }
 
 func (p *simplePeer) onBitfield(bitfield []byte) {
-	p.bitfield = bitfield
+	p.remotePeerPieces = bytesToBits(bitfield)
 	packet := encodeInterested()
 	p.send(packet)
 }
