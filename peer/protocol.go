@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	choke = iota
+	choke byte = iota
 	unchoke
 	interested
 	notInterested

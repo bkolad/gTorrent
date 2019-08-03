@@ -6,6 +6,7 @@ import (
 
 	i "github.com/bkolad/gTorrent/init"
 	"github.com/bkolad/gTorrent/peer"
+	"github.com/bkolad/gTorrent/piece"
 
 	log "github.com/bkolad/gTorrent/logger"
 	"github.com/bkolad/gTorrent/torrent"
@@ -42,16 +43,14 @@ func main() {
 
 	peerInfoChan := make(chan torrent.PeerInfo, 100)
 	go func() {
-		for _, p := range peers {
-			peerInfoChan <- p
+		for _, peer := range peers {
+			peerInfoChan <- peer
 		}
 	}()
-	h := peer.NewHandshake(conf, info)
-	peerManager := peer.NewManager(peerInfoChan, h)
-	go peerManager.ConnectToPeers()
-	//	h := p.NewHandshake(conf, info)
 
-	//	net := network.NewNetwork(peers[0], h)
-	//	net.Send()
+	handshake := peer.NewHandshake(conf, info)
+	pieceManager := piece.NewManager()
+	peerManager := peer.NewManager(peerInfoChan, handshake, pieceManager)
+	go peerManager.ConnectToPeers()
 	select {}
 }
