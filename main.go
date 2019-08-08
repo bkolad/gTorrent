@@ -49,7 +49,8 @@ func main() {
 	}()
 
 	handshake := peer.NewHandshake(conf, info)
-	pieceManager := piece.NewManager()
+	pieceManager := piece.NewManager(*info)
+
 	peerManager := peer.NewManager(peerInfoChan, handshake, pieceManager)
 	go peerManager.ConnectToPeers()
 	select {}
