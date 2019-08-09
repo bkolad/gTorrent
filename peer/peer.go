@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	log "github.com/bkolad/gTorrent/logger"
+	p "github.com/bkolad/gTorrent/piece"
 	"github.com/bkolad/gTorrent/torrent"
 )
 
@@ -29,16 +30,23 @@ type Peer interface {
 }
 
 type simplePeer struct {
-	msgs       chan MSG
-	net        Network
-	chocked    bool
-	bitfield   []byte
-	interested bool
+	msgs             chan MSG
+	net              Network
+	chocked          bool
+	remotePeerPieces []bool
+	interested       bool
+	pieceManager     p.Manager
+	currentPiece     []byte
+	currentOffset    int
 }
 
-func newPeer(messages chan MSG, peerInfo torrent.PeerInfo, handshake Handshake) Peer {
+func newPeer(messages chan MSG,
+	peerInfo torrent.PeerInfo,
+	handshake Handshake,
+	pieceManager p.Manager,
+) Peer {
 	net := NewNetwork(peerInfo, handshake)
-	peer := &simplePeer{msgs: messages, net: net}
+	peer := &simplePeer{msgs: messages, net: net, pieceManager: pieceManager}
 	net.RegisterListener(peer)
 	return peer
 }
@@ -46,14 +54,15 @@ func newPeer(messages chan MSG, peerInfo torrent.PeerInfo, handshake Handshake) 
 func (p *simplePeer) start() {
 	err := p.net.SendHandshake()
 	if err != nil {
-		fmt.Println("Err" + err.Error())
+		fmt.Println("Err " + err.Error())
 		p.msgs <- handshakeError{}
 	}
 }
 
+// callbacks runs allways in the same "peer" go-routine
+
 func (p *simplePeer) onKeepAlive() {
 	log.Debug("keep alive")
-
 }
 
 func (p *simplePeer) onChoke() {
@@ -77,12 +86,14 @@ func (p *simplePeer) onNotInterested() {
 
 func (p *simplePeer) onHave(payload []byte) {
 	log.Debug("have")
+	idx := haveToIndex(payload)
+	p.remotePeerPieces[idx] = true
 	packet := encodeInterested()
 	p.send(packet)
 }
 
 func (p *simplePeer) onBitfield(bitfield []byte) {
-	p.bitfield = bitfield
+	p.remotePeerPieces = bytesToBits(bitfield)
 	packet := encodeInterested()
 	p.send(packet)
 }
@@ -92,6 +103,15 @@ func (p *simplePeer) onRequest(piece, offset, size uint32) {
 }
 
 func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) {
+	//	p.current = append(p.current, payload)
+	p.currentOffset += len(payload)
+	lastBlock := false
+	if lastBlock {
+		// done, nextPiece := p.pieceManager.SetNext(bitSet, "peerId")
+		// p.currentPiece = make([]byte, 0)
+		//packet := encodePieceRequest(nextPiece, 0, 16384)
+		// send
+	}
 	log.Debug("Received piece " + strconv.Itoa(int(piece)) + "  " + strconv.Itoa(int(offset)) + " " + strconv.Itoa(len(payload)))
 }
 
