@@ -8,7 +8,7 @@ import (
 
 type Manager interface {
 	SetNext(string) (bool, uint32)
-	SetDone(int, []byte)
+	SetDone(uint32, []byte)
 	SetPeerPieces(string, []bool)
 	//Done() []int
 	//InProgress() []int
@@ -73,6 +73,7 @@ func (m *manager) SetNext(peerID string) (bool, uint32) {
 
 	peerPieces := m.peersPieces[peerID]
 	for i, v := range peerPieces {
+
 		if v && m.pieces[i].empty() {
 			m.pieces[i] = pieceStatus{peerID: peerID, done: false}
 			return false, uint32(i)
@@ -81,7 +82,7 @@ func (m *manager) SetNext(peerID string) (bool, uint32) {
 	return true, 0
 }
 
-func (m *manager) SetDone(i int, b []byte) {
+func (m *manager) SetDone(i uint32, b []byte) {
 	m.Lock()
 	defer m.Unlock()
 
