@@ -6,7 +6,7 @@ import (
 	"github.com/bkolad/gTorrent/torrent"
 )
 
-const maxActivePeers = 30
+const maxActivePeers = 5
 
 type Manager interface {
 	ConnectToPeers()
@@ -20,13 +20,19 @@ type manager struct {
 	pieceManager p.Manager
 }
 
-func NewManager(peerInfo chan torrent.PeerInfo,
+func NewManager(peersInfo chan torrent.PeerInfo,
 	handshake Handshake,
 	pieceManager p.Manager,
 ) Manager {
 	activePeers := make(map[torrent.PeerInfo]Peer)
 	messages := make(chan MSG, 100)
-	return &manager{peerInfo, activePeers, messages, handshake, pieceManager}
+	return &manager{
+		peersInfo:    peersInfo,
+		activePeers:  activePeers,
+		messages:     messages,
+		handshake:    handshake,
+		pieceManager: pieceManager,
+	}
 }
 
 func (m *manager) ConnectToPeers() {

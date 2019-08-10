@@ -10,6 +10,8 @@ type Manager interface {
 	SetNext(string) (bool, uint32)
 	SetDone(uint32, []byte)
 	SetPeerPieces(string, []bool)
+	PieceSize() int
+	LastPieceSize() int
 	//Done() []int
 	//InProgress() []int
 	//PieceLength() int
@@ -40,6 +42,7 @@ type manager struct {
 	sync.Mutex
 	pieces      []pieceStatus
 	peersPieces map[string][]bool
+	pieceSize   int
 }
 
 func NewManager(info torrent.Info) *manager {
@@ -51,12 +54,14 @@ func NewManager(info torrent.Info) *manager {
 	} else {
 		lastPieceSize = info.PieceSize
 	}
+
 	pieces := make([]pieceStatus, numberOfPieces)
 	return &manager{
 		info:          info,
-		lastPieceSize: lastPieceSize,
 		pieces:        pieces,
 		peersPieces:   map[string][]bool{},
+		lastPieceSize: lastPieceSize,
+		pieceSize:     info.PieceSize,
 	}
 }
 
@@ -67,13 +72,19 @@ func calculateLastPieceSize(length int, pieceSize int) int {
 	return length % pieceSize
 }
 
+func (m *manager) PieceSize() int {
+	return m.pieceSize
+}
+
+func (m *manager) LastPieceSize() int {
+	return m.lastPieceSize
+}
 func (m *manager) SetNext(peerID string) (bool, uint32) {
 	m.Lock()
 	defer m.Unlock()
 
 	peerPieces := m.peersPieces[peerID]
 	for i, v := range peerPieces {
-
 		if v && m.pieces[i].empty() {
 			m.pieces[i] = pieceStatus{peerID: peerID, done: false}
 			return false, uint32(i)
@@ -85,7 +96,6 @@ func (m *manager) SetNext(peerID string) (bool, uint32) {
 func (m *manager) SetDone(i uint32, b []byte) {
 	m.Lock()
 	defer m.Unlock()
-
 	m.pieces[i] = pieceStatus{
 		peerID: m.pieces[i].peerID,
 		done:   true,
