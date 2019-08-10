@@ -22,7 +22,7 @@ type Peer interface {
 	onHave([]byte)
 	onBitfield([]byte)
 	onRequest(uint32, uint32, uint32)
-	onPiece(uint32, uint32, []byte)
+	onPiece(uint32, uint32, []byte) bool
 	onCancel()
 	onPort()
 	onUnknown()
@@ -38,7 +38,6 @@ type simplePeer struct {
 	currentPieceData []byte
 	currentOffset    uint32
 	peerInfo         torrent.PeerInfo
-	chunkSize        uint32
 }
 
 func newPeer(messages chan MSG,
@@ -47,12 +46,20 @@ func newPeer(messages chan MSG,
 	pieceManager p.Manager,
 ) Peer {
 	net := NewNetwork(peerInfo, handshake)
+	return newPeerWithNetwork(net, messages, peerInfo, handshake, pieceManager)
+}
+
+func newPeerWithNetwork(net Network,
+	messages chan MSG,
+	peerInfo torrent.PeerInfo,
+	handshake Handshake,
+	pieceManager p.Manager,
+) Peer {
 	peer := &simplePeer{
 		msgs:         messages,
 		net:          net,
 		pieceManager: pieceManager,
 		peerInfo:     peerInfo,
-		chunkSize:    16384,
 	}
 	net.RegisterListener(peer)
 	return peer
@@ -84,7 +91,7 @@ func (p *simplePeer) onUnchoke() {
 		return
 	}
 	p.currentPiece = next
-	packet := encodePieceRequest(next, 0, p.chunkSize)
+	packet := encodePieceRequest(next, 0, p.pieceManager.ChunkSize())
 	p.currentOffset = 0
 	p.send(packet)
 }
@@ -116,27 +123,24 @@ func (p *simplePeer) onRequest(piece, offset, size uint32) {
 
 }
 
-func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) {
+func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
 	p.currentOffset += uint32(len(payload))
 	p.currentPieceData = append(p.currentPieceData, payload...)
 
-	lastChunk := int(p.currentOffset) == p.pieceManager.PieceSize()
-	if lastChunk {
+	isLastChunk := p.currentOffset == p.pieceManager.PieceSize(piece)
+	if isLastChunk {
 		done, nextPiece := p.pieceManager.SetNext(p.peerInfo.IP)
 		if done {
-			return
+			return true
 		}
-
-		log.Info(p.peerInfo.IP + "  CP " + fmt.Sprint(p.currentPiece) + " CO " + fmt.Sprint(p.currentPiece) + "data " + fmt.Sprint(len(p.currentPieceData)))
-
+		log.Info(p.peerInfo.IP + ": Downloading Piece: " + fmt.Sprint(p.currentPiece))
 		p.currentPiece = nextPiece
 		p.currentPieceData = make([]byte, 0)
 		p.currentOffset = 0
-
 	}
-	packet := encodePieceRequest(p.currentPiece, p.currentOffset, p.chunkSize)
+	packet := encodePieceRequest(p.currentPiece, p.currentOffset, p.pieceManager.ChunkSize())
 	p.send(packet)
-
+	return false
 	//	log.Debug(p.peerInfo.IP + " Received piece " + strconv.Itoa(int(piece)) + "  " + strconv.Itoa(int(offset)) + " len: " + strconv.Itoa(len(payload)) + " OFFSET: " + fmt.Sprint(p.currentOffset) + " Piece: " + fmt.Sprint(p.currentPiece))
 }
 

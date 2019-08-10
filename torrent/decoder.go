@@ -21,6 +21,7 @@ type Info struct {
 	files        []file
 	PieceHashes  [][]byte
 	InfoHash     []byte
+	ChunkSize    int
 }
 
 //TorrentDecoder decodeds tracker data
@@ -31,6 +32,8 @@ type TorrentDecoder interface {
 type torrentDec struct {
 	str string
 }
+
+const chunkSize = 16384
 
 // NewTorrentDecoder returns default torrent file decoder
 // which holds the entire torrent file in memory.
@@ -130,6 +133,7 @@ func (dec *torrentDec) Decode() (*Info, error) {
 		files,
 		pieceHash,
 		infoHash,
+		chunkSize,
 	}, nil
 
 }
