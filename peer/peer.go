@@ -120,7 +120,9 @@ func (p *simplePeer) onBitfield(bitfield []byte) {
 }
 
 func (p *simplePeer) onRequest(piece, offset, size uint32) {
-
+	data := p.pieceManager.GetData(piece, offset, size)
+	packet := encodePieceData(piece, offset, data)
+	p.send(packet)
 }
 
 func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
@@ -141,7 +143,6 @@ func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
 	packet := encodePieceRequest(p.currentPiece, p.currentOffset, p.pieceManager.ChunkSize())
 	p.send(packet)
 	return false
-	//	log.Debug(p.peerInfo.IP + " Received piece " + strconv.Itoa(int(piece)) + "  " + strconv.Itoa(int(offset)) + " len: " + strconv.Itoa(len(payload)) + " OFFSET: " + fmt.Sprint(p.currentOffset) + " Piece: " + fmt.Sprint(p.currentPiece))
 }
 
 func (p *simplePeer) onCancel() {

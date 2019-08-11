@@ -28,9 +28,9 @@ func decodePiece(payload []byte) (uint32, uint32, []byte) {
 	return piece, offset, payload[8:]
 }
 
-func encodePieceRequest(piece, offset, size uint32) Packet {
+func encodePieceRequest(pieceNumber, offset, size uint32) Packet {
 	b := &bytes.Buffer{}
-	binary.Write(b, binary.BigEndian, piece)
+	binary.Write(b, binary.BigEndian, pieceNumber)
 	binary.Write(b, binary.BigEndian, offset)
 	binary.Write(b, binary.BigEndian, size)
 	packet := &packet{id: request, payload: b.Bytes()}
@@ -42,6 +42,15 @@ func decodeRequest(payload []byte) (uint32, uint32, uint32) {
 	offset := binary.BigEndian.Uint32(payload[4:8])
 	size := binary.BigEndian.Uint32(payload[8:12])
 	return piece, offset, size
+}
+
+func encodePieceData(pieceNumber, offset uint32, data []byte) Packet {
+	b := &bytes.Buffer{}
+	binary.Write(b, binary.BigEndian, pieceNumber)
+	binary.Write(b, binary.BigEndian, offset)
+	b.Write(data)
+	packet := &packet{id: piece, payload: b.Bytes()}
+	return packet
 }
 
 func encodeHave(bitfield []byte) Packet {

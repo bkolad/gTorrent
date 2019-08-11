@@ -12,6 +12,8 @@ type Manager interface {
 	SetPeerPieces(string, []bool)
 	PieceSize(n uint32) uint32
 	ChunkSize() uint32
+	PieceCount() uint32
+	GetData(uint32, uint32, uint32) []byte
 	//Done() []int
 	//InProgress() []int
 	//PieceLength() int
@@ -72,8 +74,16 @@ func calculateLastPieceSize(length int, pieceSize int) int {
 	return length % pieceSize
 }
 
+func (m *manager) GetData(piece uint32, offset uint32, size uint32) []byte {
+	return nil
+}
+
+func (m *manager) PieceCount() uint32 {
+	return uint32(len(m.pieces))
+}
+
 func (m *manager) PieceSize(n uint32) uint32 {
-	if n == uint32(len(m.pieces)) {
+	if n == m.PieceCount() {
 		return m.lastPieceSize
 	}
 	return m.pieceSize

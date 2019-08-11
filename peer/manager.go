@@ -1,12 +1,14 @@
 package peer
 
 import (
+	"fmt"
+
 	log "github.com/bkolad/gTorrent/logger"
 	p "github.com/bkolad/gTorrent/piece"
 	"github.com/bkolad/gTorrent/torrent"
 )
 
-const maxActivePeers = 5
+const maxActivePeers = 30
 
 type Manager interface {
 	ConnectToPeers()
@@ -42,7 +44,9 @@ func (m *manager) ConnectToPeers() {
 				log.Info("connecting to peer " + p.IP)
 				peer := newPeer(m.messages, p, m.handshake, m.pieceManager)
 				go peer.start()
+				//TODO fix reace condition
 				m.activePeers[p] = peer
+				fmt.Println(m.activePeers[p])
 			} else {
 				break
 			}

@@ -14,6 +14,7 @@ func TestPeer(t *testing.T) {
 	chunkSize := 10
 	torrentInfo := torrent.Info{
 		PieceSize: 15 * chunkSize,
+		//TODO try 162
 		Length:    165 * chunkSize,
 		ChunkSize: chunkSize,
 	}
@@ -29,8 +30,7 @@ func TestPeer(t *testing.T) {
 	pieces[10] = true
 
 	bitfield := bitsToBytes(pieces)
-	//fmt.Println(bitfield)
-	//fmt.Println(bytesToBits(bitfield))
+
 	peer.onBitfield(bitfield)
 	peer.onUnchoke()
 
