@@ -43,5 +43,6 @@ func info() *Info {
 	}
 	info.PieceHashes = [][]byte{pieceHashe}
 	info.PieceSize = 524288
+	info.ChunkSize = 16384
 	return info
 }

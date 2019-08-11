@@ -1,6 +1,8 @@
 package peer
 
 import (
+	"fmt"
+
 	log "github.com/bkolad/gTorrent/logger"
 	p "github.com/bkolad/gTorrent/piece"
 	"github.com/bkolad/gTorrent/torrent"
@@ -20,13 +22,19 @@ type manager struct {
 	pieceManager p.Manager
 }
 
-func NewManager(peerInfo chan torrent.PeerInfo,
+func NewManager(peersInfo chan torrent.PeerInfo,
 	handshake Handshake,
 	pieceManager p.Manager,
 ) Manager {
 	activePeers := make(map[torrent.PeerInfo]Peer)
 	messages := make(chan MSG, 100)
-	return &manager{peerInfo, activePeers, messages, handshake, pieceManager}
+	return &manager{
+		peersInfo:    peersInfo,
+		activePeers:  activePeers,
+		messages:     messages,
+		handshake:    handshake,
+		pieceManager: pieceManager,
+	}
 }
 
 func (m *manager) ConnectToPeers() {
@@ -36,7 +44,9 @@ func (m *manager) ConnectToPeers() {
 				log.Info("connecting to peer " + p.IP)
 				peer := newPeer(m.messages, p, m.handshake, m.pieceManager)
 				go peer.start()
+				//TODO fix reace condition
 				m.activePeers[p] = peer
+				fmt.Println(m.activePeers[p])
 			} else {
 				break
 			}

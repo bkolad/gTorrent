@@ -10,7 +10,7 @@ import (
 type testCase struct {
 	info           torrent.Info
 	numberOfPieces int
-	lastPieceSize  int
+	lastPieceSize  uint32
 }
 
 func tests() []testCase {

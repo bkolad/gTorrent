@@ -111,8 +111,8 @@ func (n *network) handleConn() error {
 }
 
 func (n *network) dispatch(p Packet) {
-	n.Lock()
-	defer n.Unlock()
+	//	n.Lock()
+	//defer n.Unlock()
 	n.listener.NewPacket(p)
 }
 

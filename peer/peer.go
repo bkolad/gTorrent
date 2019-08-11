@@ -2,7 +2,6 @@ package peer
 
 import (
 	"fmt"
-	"strconv"
 
 	log "github.com/bkolad/gTorrent/logger"
 	p "github.com/bkolad/gTorrent/piece"
@@ -23,7 +22,7 @@ type Peer interface {
 	onHave([]byte)
 	onBitfield([]byte)
 	onRequest(uint32, uint32, uint32)
-	onPiece(uint32, uint32, []byte)
+	onPiece(uint32, uint32, []byte) bool
 	onCancel()
 	onPort()
 	onUnknown()
@@ -33,11 +32,12 @@ type simplePeer struct {
 	msgs             chan MSG
 	net              Network
 	chocked          bool
-	remotePeerPieces []bool
 	interested       bool
 	pieceManager     p.Manager
-	currentPiece     []byte
-	currentOffset    int
+	currentPiece     uint32
+	currentPieceData []byte
+	currentOffset    uint32
+	peerInfo         torrent.PeerInfo
 }
 
 func newPeer(messages chan MSG,
@@ -46,7 +46,21 @@ func newPeer(messages chan MSG,
 	pieceManager p.Manager,
 ) Peer {
 	net := NewNetwork(peerInfo, handshake)
-	peer := &simplePeer{msgs: messages, net: net, pieceManager: pieceManager}
+	return newPeerWithNetwork(net, messages, peerInfo, handshake, pieceManager)
+}
+
+func newPeerWithNetwork(net Network,
+	messages chan MSG,
+	peerInfo torrent.PeerInfo,
+	handshake Handshake,
+	pieceManager p.Manager,
+) Peer {
+	peer := &simplePeer{
+		msgs:         messages,
+		net:          net,
+		pieceManager: pieceManager,
+		peerInfo:     peerInfo,
+	}
 	net.RegisterListener(peer)
 	return peer
 }
@@ -72,7 +86,13 @@ func (p *simplePeer) onChoke() {
 func (p *simplePeer) onUnchoke() {
 	log.Debug("Unchoked")
 	p.chocked = false
-	packet := encodePieceRequest(0, 0, 16384)
+	done, next := p.pieceManager.SetNext(p.peerInfo.IP)
+	if done {
+		return
+	}
+	p.currentPiece = next
+	packet := encodePieceRequest(next, 0, p.pieceManager.ChunkSize())
+	p.currentOffset = 0
 	p.send(packet)
 }
 
@@ -86,33 +106,43 @@ func (p *simplePeer) onNotInterested() {
 
 func (p *simplePeer) onHave(payload []byte) {
 	log.Debug("have")
-	idx := haveToIndex(payload)
-	p.remotePeerPieces[idx] = true
-	packet := encodeInterested()
-	p.send(packet)
+	//idx := haveToIndex(payload)
+	//p.remotePeerPieces[idx] = true
+	//packet := encodeInterested()
+	//p.send(packet)
 }
 
 func (p *simplePeer) onBitfield(bitfield []byte) {
-	p.remotePeerPieces = bytesToBits(bitfield)
+	remotePeerPieces := bytesToBits(bitfield)
+	p.pieceManager.SetPeerPieces(p.peerInfo.IP, remotePeerPieces)
 	packet := encodeInterested()
 	p.send(packet)
 }
 
 func (p *simplePeer) onRequest(piece, offset, size uint32) {
-
+	data := p.pieceManager.GetData(piece, offset, size)
+	packet := encodePieceData(piece, offset, data)
+	p.send(packet)
 }
 
-func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) {
-	//	p.current = append(p.current, payload)
-	p.currentOffset += len(payload)
-	lastBlock := false
-	if lastBlock {
-		// done, nextPiece := p.pieceManager.SetNext(bitSet, "peerId")
-		// p.currentPiece = make([]byte, 0)
-		//packet := encodePieceRequest(nextPiece, 0, 16384)
-		// send
+func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
+	p.currentOffset += uint32(len(payload))
+	p.currentPieceData = append(p.currentPieceData, payload...)
+
+	isLastChunk := p.currentOffset == p.pieceManager.PieceSize(piece)
+	if isLastChunk {
+		done, nextPiece := p.pieceManager.SetNext(p.peerInfo.IP)
+		if done {
+			return true
+		}
+		log.Info(p.peerInfo.IP + ": Downloading Piece: " + fmt.Sprint(p.currentPiece))
+		p.currentPiece = nextPiece
+		p.currentPieceData = make([]byte, 0)
+		p.currentOffset = 0
 	}
-	log.Debug("Received piece " + strconv.Itoa(int(piece)) + "  " + strconv.Itoa(int(offset)) + " " + strconv.Itoa(len(payload)))
+	packet := encodePieceRequest(p.currentPiece, p.currentOffset, p.pieceManager.ChunkSize())
+	p.send(packet)
+	return false
 }
 
 func (p *simplePeer) onCancel() {
