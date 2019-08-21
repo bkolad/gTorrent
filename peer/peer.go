@@ -34,6 +34,7 @@ type simplePeer struct {
 	chocked          bool
 	interested       bool
 	pieceManager     p.Manager
+	pieceRepository  p.Repository
 	currentPiece     uint32
 	currentPieceData []byte
 	currentOffset    uint32
@@ -54,12 +55,13 @@ func newPeerWithNetwork(net Network,
 	peerInfo torrent.PeerInfo,
 	handshake Handshake,
 	pieceManager p.Manager,
-) Peer {
+) *simplePeer {
 	peer := &simplePeer{
-		msgs:         messages,
-		net:          net,
-		pieceManager: pieceManager,
-		peerInfo:     peerInfo,
+		msgs:            messages,
+		net:             net,
+		pieceManager:    pieceManager,
+		peerInfo:        peerInfo,
+		pieceRepository: p.NewRepo(pieceManager.PieceCount()),
 	}
 	net.RegisterListener(peer)
 	return peer
@@ -120,7 +122,7 @@ func (p *simplePeer) onBitfield(bitfield []byte) {
 }
 
 func (p *simplePeer) onRequest(piece, offset, size uint32) {
-	data := p.pieceManager.GetData(piece, offset, size)
+	data := p.pieceRepository.Get(piece, offset, size)
 	packet := encodePieceData(piece, offset, data)
 	p.send(packet)
 }
@@ -131,11 +133,12 @@ func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
 
 	isLastChunk := p.currentOffset == p.pieceManager.PieceSize(piece)
 	if isLastChunk {
+		p.pieceRepository.Save(piece, p.currentPieceData)
 		done, nextPiece := p.pieceManager.SetNext(p.peerInfo.IP)
+		log.Info(p.peerInfo.IP + ": Downloaded piece: " + fmt.Sprint(p.currentPiece))
 		if done {
 			return true
 		}
-		log.Info(p.peerInfo.IP + ": Downloading Piece: " + fmt.Sprint(p.currentPiece))
 		p.currentPiece = nextPiece
 		p.currentPieceData = make([]byte, 0)
 		p.currentOffset = 0

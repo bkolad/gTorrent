@@ -79,6 +79,10 @@ func bytesToBits(bytes []byte) []bool {
 }
 
 func bitsToBytes(bits []bool) []byte {
+	if len(bits)%8 != 0 {
+		panic("bits length should be multiple of 8")
+	}
+
 	var bytes []byte
 	for i := 0; i < len(bits)/8; i++ {
 		var result byte
