@@ -34,6 +34,13 @@ func tests() []testCase {
 				PieceSize: 120,
 				Length:    80},
 			numberOfPieces: 1,
+			lastPieceSize:  80,
+		},
+		testCase{
+			info: torrent.Info{
+				PieceSize: 120,
+				Length:    120},
+			numberOfPieces: 1,
 			lastPieceSize:  120,
 		},
 	}
@@ -42,7 +49,7 @@ func tests() []testCase {
 func TestPeerManager(t *testing.T) {
 	for _, testCase := range tests() {
 		manager := NewManager(testCase.info)
-		require.Equal(t, testCase.lastPieceSize, manager.lastPieceSize)
+		require.Equal(t, int(testCase.lastPieceSize), int(manager.lastPieceSize))
 		require.Equal(t, testCase.numberOfPieces, len(manager.pieces))
 	}
 }

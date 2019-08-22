@@ -13,7 +13,6 @@ type Manager interface {
 	PieceSize(n uint32) uint32
 	ChunkSize() uint32
 	PieceCount() uint32
-	GetData(uint32, uint32, uint32) []byte
 	//Done() []int
 	//InProgress() []int
 	//PieceLength() int
@@ -48,14 +47,7 @@ type manager struct {
 }
 
 func NewManager(info torrent.Info) *manager {
-	lastPieceSize := calculateLastPieceSize(info.Length, info.PieceSize)
-	numberOfPieces := info.Length / info.PieceSize
-
-	if lastPieceSize != 0 {
-		numberOfPieces++
-	} else {
-		lastPieceSize = info.PieceSize
-	}
+	lastPieceSize, numberOfPieces := CalculateLastPieceSize(info.Length, info.PieceSize)
 
 	pieces := make([]pieceStatus, numberOfPieces)
 	return &manager{
@@ -67,15 +59,16 @@ func NewManager(info torrent.Info) *manager {
 	}
 }
 
-func calculateLastPieceSize(length int, pieceSize int) int {
-	if pieceSize > length {
-		return pieceSize
-	}
-	return length % pieceSize
-}
+func CalculateLastPieceSize(length int, pieceSize int) (uint32, uint32) {
+	lastPieceSize := length % pieceSize
+	numberOfPieces := length / pieceSize
 
-func (m *manager) GetData(piece uint32, offset uint32, size uint32) []byte {
-	return nil
+	if lastPieceSize != 0 {
+		numberOfPieces++
+	} else {
+		lastPieceSize = pieceSize
+	}
+	return uint32(lastPieceSize), uint32(numberOfPieces)
 }
 
 func (m *manager) PieceCount() uint32 {
@@ -83,7 +76,7 @@ func (m *manager) PieceCount() uint32 {
 }
 
 func (m *manager) PieceSize(n uint32) uint32 {
-	if n == m.PieceCount() {
+	if n == m.PieceCount()-1 {
 		return m.lastPieceSize
 	}
 	return m.pieceSize

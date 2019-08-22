@@ -5,46 +5,58 @@ import (
 
 	p "github.com/bkolad/gTorrent/piece"
 	"github.com/bkolad/gTorrent/torrent"
+	"github.com/stretchr/testify/require"
 )
 
-func TestPeer(t *testing.T) {
+func torrents() []torrent.Info {
+	chunkSize := 32
+	return []torrent.Info{
+		torrent.Info{
+			PieceSize: 15 * chunkSize,
+			Length:    162 * chunkSize,
+			ChunkSize: chunkSize,
+		},
+		torrent.Info{
+			PieceSize: 15 * chunkSize,
+			Length:    165 * chunkSize,
+			ChunkSize: chunkSize,
+		},
+	}
+}
 
+func TestPeer(t *testing.T) {
 	peerInfo := torrent.PeerInfo{IP: "SOME IP", Port: 9912}
 	handshake := Handshake{}
-	chunkSize := 10
-	torrentInfo := torrent.Info{
-		PieceSize: 15 * chunkSize,
-		//TODO try 162
-		Length:    165 * chunkSize,
-		ChunkSize: chunkSize,
-	}
-	pieceManager := p.NewManager(torrentInfo)
 
-	data := data(torrentInfo.Length)
-	fakeNet := fakeNetwork(data, torrentInfo.PieceSize)
-	peer := newPeerWithNetwork(fakeNet, make(chan MSG), peerInfo, handshake, pieceManager)
-	pieces := make([]bool, 16)
-	pieces[3] = true
-	pieces[4] = true
-	pieces[9] = true
-	pieces[10] = true
+	for _, torrentInfo := range torrents() {
+		pieceManager := p.NewManager(torrentInfo)
 
-	bitfield := bitsToBytes(pieces)
+		repo := makeRepo(torrentInfo.Length, torrentInfo.PieceSize)
+		fakeNet := fakeNetwork(repo)
+		peer := newPeerWithNetwork(fakeNet, make(chan MSG), peerInfo, handshake, pieceManager)
+		pieces := make([]bool, 16)
+		pieces[3] = true
+		pieces[4] = true
+		pieces[9] = true
+		pieces[10] = true
 
-	peer.onBitfield(bitfield)
-	peer.onUnchoke()
+		bitfield := bitsToBytes(pieces)
 
-	i := 0
-	done := false
-	for !done {
-		req, payload := fakeNet.payload()
-		done = peer.onPiece(req.piece, req.offset, payload)
-		i++
-		if i > torrentInfo.Length/torrentInfo.ChunkSize {
-			break
+		peer.onBitfield(bitfield)
+		peer.onUnchoke()
+
+		timeout := 1000
+		done := false
+		for !done {
+			req, payload := fakeNet.payload()
+			done = peer.onPiece(req.piece, req.offset, payload)
+			timeout--
+			if timeout <= 0 {
+				require.Fail(t, "Test Timeout")
+			}
 		}
+		require.Equal(t, peer.pieceRepository.Get(9, 10, 10), repo.Get(9, 10, 10))
 	}
-
 }
 
 type req struct {
@@ -54,17 +66,14 @@ type req struct {
 }
 
 type fakeNet struct {
-	pieces    []byte
-	pieceSize int
+	repo      p.Repository
 	requested req
 }
 
 func (fN *fakeNet) payload() (req, []byte) {
 	req := fN.requested
-	//TODO handle the last piece request
-	from := req.piece*uint32(fN.pieceSize) + req.offset
-	to := from + req.size
-	return req, fN.pieces[from:to]
+	p := fN.repo.Get(req.piece, req.offset, req.size)
+	return req, p
 }
 
 func (fN *fakeNet) SendHandshake() error {
@@ -83,14 +92,26 @@ func (fN *fakeNet) Send(p Packet) error {
 	return nil
 }
 
-func fakeNetwork(data []byte, pieceSize int) *fakeNet {
-	return &fakeNet{data, pieceSize, req{}}
+func fakeNetwork(repo p.Repository) *fakeNet {
+	return &fakeNet{repo, req{}}
 }
 
-func data(length int) []byte {
-	data := make([]byte, length)
-	for i := 0; i < length; i++ {
-		data[i] = byte(i)
+func makeRepo(length, pieceSize int) p.Repository {
+	lastPieceSize, numberOfPieces := p.CalculateLastPieceSize(length, pieceSize)
+	repo := p.NewRepo(numberOfPieces)
+	for i := uint32(0); i < numberOfPieces-1; i++ {
+		data := make([]byte, pieceSize)
+		for k := 0; k < pieceSize; k++ {
+			data[k] = byte(uint32(3*k) + 2*i)
+		}
+		repo.Save(uint32(i), data)
 	}
-	return data
+
+	piece := make([]byte, lastPieceSize)
+	for k := uint32(0); k < lastPieceSize; k++ {
+		piece[k] = byte(k)
+	}
+
+	repo.Save(uint32(numberOfPieces-1), piece)
+	return repo
 }
