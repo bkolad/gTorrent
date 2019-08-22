@@ -8,43 +8,55 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func torrents() []torrent.Info {
+	chunkSize := 32
+	return []torrent.Info{
+		torrent.Info{
+			PieceSize: 15 * chunkSize,
+			Length:    162 * chunkSize,
+			ChunkSize: chunkSize,
+		},
+		torrent.Info{
+			PieceSize: 15 * chunkSize,
+			Length:    165 * chunkSize,
+			ChunkSize: chunkSize,
+		},
+	}
+}
+
 func TestPeer(t *testing.T) {
 	peerInfo := torrent.PeerInfo{IP: "SOME IP", Port: 9912}
 	handshake := Handshake{}
-	chunkSize := 32
-	torrentInfo := torrent.Info{
-		PieceSize: 15 * chunkSize,
-		//TODO try 162
-		Length:    162 * chunkSize,
-		ChunkSize: chunkSize,
-	}
-	pieceManager := p.NewManager(torrentInfo)
 
-	repo := makeRepo(torrentInfo.Length, torrentInfo.PieceSize)
-	fakeNet := fakeNetwork(repo)
-	peer := newPeerWithNetwork(fakeNet, make(chan MSG), peerInfo, handshake, pieceManager)
-	pieces := make([]bool, 16)
-	pieces[3] = true
-	pieces[4] = true
-	pieces[9] = true
-	pieces[10] = true
+	for _, torrentInfo := range torrents() {
+		pieceManager := p.NewManager(torrentInfo)
 
-	bitfield := bitsToBytes(pieces)
+		repo := makeRepo(torrentInfo.Length, torrentInfo.PieceSize)
+		fakeNet := fakeNetwork(repo)
+		peer := newPeerWithNetwork(fakeNet, make(chan MSG), peerInfo, handshake, pieceManager)
+		pieces := make([]bool, 16)
+		pieces[3] = true
+		pieces[4] = true
+		pieces[9] = true
+		pieces[10] = true
 
-	peer.onBitfield(bitfield)
-	peer.onUnchoke()
+		bitfield := bitsToBytes(pieces)
 
-	timeout := 1000
-	done := false
-	for !done {
-		req, payload := fakeNet.payload()
-		done = peer.onPiece(req.piece, req.offset, payload)
-		timeout--
-		if timeout <= 0 {
-			require.Fail(t, "Test Timeout")
+		peer.onBitfield(bitfield)
+		peer.onUnchoke()
+
+		timeout := 1000
+		done := false
+		for !done {
+			req, payload := fakeNet.payload()
+			done = peer.onPiece(req.piece, req.offset, payload)
+			timeout--
+			if timeout <= 0 {
+				require.Fail(t, "Test Timeout")
+			}
 		}
+		require.Equal(t, peer.pieceRepository.Get(9, 10, 10), repo.Get(9, 10, 10))
 	}
-	require.Equal(t, peer.pieceRepository.Get(9, 10, 10), repo.Get(9, 10, 10))
 }
 
 type req struct {
@@ -99,6 +111,7 @@ func makeRepo(length, pieceSize int) p.Repository {
 	for k := uint32(0); k < lastPieceSize; k++ {
 		piece[k] = byte(k)
 	}
+
 	repo.Save(uint32(numberOfPieces-1), piece)
 	return repo
 }
