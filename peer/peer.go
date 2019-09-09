@@ -141,6 +141,7 @@ func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
 		log.Info(p.peerInfo.IP + ": Downloaded piece: " + fmt.Sprint(p.currentPiece))
 		if done {
 			p.Stop()
+			return true
 		}
 		p.currentPiece = nextPiece
 		p.currentPieceData = make([]byte, 0)
