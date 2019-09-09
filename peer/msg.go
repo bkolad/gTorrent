@@ -7,6 +7,6 @@ type MSG interface {
 
 type handshakeError struct{}
 
-type killed struct {
+type kill struct {
 	peerInfo torrent.PeerInfo
 }
