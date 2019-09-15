@@ -18,13 +18,12 @@ type torrentData struct {
 func torrents2() []torrentData {
 	return []torrentData{
 		torrentData{chunkSize: 32, pieceSize: 15 * 32, length: 162 * 32},
-		//torrentData{chunkSize: 32, pieceSize: 15 * 32, length: 165 * 32},
+		torrentData{chunkSize: 32, pieceSize: 15 * 32, length: 165 * 32},
 	}
 }
 
 func torrentsInfo(torrentData torrentData) (torrent.Info, p.Repository) {
 	repo, pieceHashes := makeRepo(torrentData.length, torrentData.pieceSize)
-	//	hashes := [][]byte{}
 	ti := torrent.Info{
 		PieceSize:   torrentData.pieceSize,
 		Length:      torrentData.length,
