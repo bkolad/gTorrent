@@ -1,6 +1,7 @@
 package peer
 
 import (
+	"crypto/sha1"
 	"testing"
 
 	p "github.com/bkolad/gTorrent/piece"
@@ -8,30 +9,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func torrents() []torrent.Info {
-	chunkSize := 32
-	return []torrent.Info{
-		torrent.Info{
-			PieceSize: 15 * chunkSize,
-			Length:    162 * chunkSize,
-			ChunkSize: chunkSize,
-		},
-		torrent.Info{
-			PieceSize: 15 * chunkSize,
-			Length:    165 * chunkSize,
-			ChunkSize: chunkSize,
-		},
+type torrentData struct {
+	chunkSize int
+	pieceSize int
+	length    int
+}
+
+func torrents2() []torrentData {
+	return []torrentData{
+		torrentData{chunkSize: 32, pieceSize: 15 * 32, length: 162 * 32},
+		//torrentData{chunkSize: 32, pieceSize: 15 * 32, length: 165 * 32},
 	}
+}
+
+func torrentsInfo(torrentData torrentData) (torrent.Info, p.Repository) {
+	repo, pieceHashes := makeRepo(torrentData.length, torrentData.pieceSize)
+	//	hashes := [][]byte{}
+	ti := torrent.Info{
+		PieceSize:   torrentData.pieceSize,
+		Length:      torrentData.length,
+		ChunkSize:   torrentData.chunkSize,
+		PieceHashes: pieceHashes,
+	}
+	return ti, repo
 }
 
 func TestPeer(t *testing.T) {
 	peerInfo := torrent.PeerInfo{IP: "SOME IP", Port: 9912}
 	handshake := Handshake{}
 
-	for _, torrentInfo := range torrents() {
+	for _, torrentData := range torrents2() {
+		torrentInfo, repo := torrentsInfo(torrentData)
 		pieceManager := p.NewManager(torrentInfo)
 
-		repo := makeRepo(torrentInfo.Length, torrentInfo.PieceSize)
 		fakeNet := fakeNetwork(repo)
 		peer := newPeerWithNetwork(fakeNet, make(chan MSG), peerInfo, handshake, pieceManager)
 		pieces := make([]bool, 16)
@@ -96,7 +106,8 @@ func fakeNetwork(repo p.Repository) *fakeNet {
 	return &fakeNet{repo, req{}}
 }
 
-func makeRepo(length, pieceSize int) p.Repository {
+func makeRepo(length, pieceSize int) (p.Repository, [][]byte) {
+	pieceHashes := [][]byte{}
 	lastPieceSize, numberOfPieces := p.CalculateLastPieceSize(length, pieceSize)
 	repo := p.NewRepo(numberOfPieces)
 	for i := uint32(0); i < numberOfPieces-1; i++ {
@@ -104,6 +115,8 @@ func makeRepo(length, pieceSize int) p.Repository {
 		for k := 0; k < pieceSize; k++ {
 			data[k] = byte(uint32(3*k) + 2*i)
 		}
+		pieceHash := sha1.Sum(data)
+		pieceHashes = append(pieceHashes, pieceHash[:])
 		repo.Save(uint32(i), data)
 	}
 
@@ -111,7 +124,9 @@ func makeRepo(length, pieceSize int) p.Repository {
 	for k := uint32(0); k < lastPieceSize; k++ {
 		piece[k] = byte(k)
 	}
+	pieceHash := sha1.Sum(piece)
+	pieceHashes = append(pieceHashes, pieceHash[:])
 
 	repo.Save(uint32(numberOfPieces-1), piece)
-	return repo
+	return repo, pieceHashes
 }

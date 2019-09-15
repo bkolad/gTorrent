@@ -133,6 +133,10 @@ func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
 
 	isLastChunk := p.currentOffset == p.pieceManager.PieceSize(piece)
 	if isLastChunk {
+		if !p.pieceManager.Verify(piece, p.currentPieceData) {
+			log.Error("Piece has wrong hash | Peer:" + p.peerInfo.IP)
+			return true
+		}
 		p.pieceRepository.Save(piece, p.currentPieceData)
 		done, nextPiece := p.pieceManager.SetNext(p.peerInfo.IP)
 		log.Info(p.peerInfo.IP + ": Downloaded piece: " + fmt.Sprint(p.currentPiece))

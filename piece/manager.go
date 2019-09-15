@@ -1,6 +1,8 @@
 package piece
 
 import (
+	"bytes"
+	"crypto/sha1"
 	"sync"
 
 	"github.com/bkolad/gTorrent/torrent"
@@ -13,6 +15,7 @@ type Manager interface {
 	PieceSize(n uint32) uint32
 	ChunkSize() uint32
 	PieceCount() uint32
+	Verify(i uint32, piece []byte) bool
 	//Done() []int
 	//InProgress() []int
 	//PieceLength() int
@@ -113,4 +116,9 @@ func (m *manager) SetPeerPieces(peerID string, pieces []bool) {
 	m.Lock()
 	defer m.Unlock()
 	m.peersPieces[peerID] = pieces
+}
+
+func (m *manager) Verify(i uint32, piece []byte) bool {
+	pieceHash := sha1.Sum(piece)
+	return 0 == bytes.Compare(m.info.PieceHashes[i], pieceHash[:])
 }
