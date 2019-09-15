@@ -26,6 +26,7 @@ type Peer interface {
 	onCancel()
 	onPort()
 	onUnknown()
+	Stop()
 }
 
 type simplePeer struct {
@@ -39,6 +40,7 @@ type simplePeer struct {
 	currentPieceData []byte
 	currentOffset    uint32
 	peerInfo         torrent.PeerInfo
+	done             chan struct{}
 }
 
 func newPeer(messages chan MSG,
@@ -62,6 +64,7 @@ func newPeerWithNetwork(net Network,
 		pieceManager:    pieceManager,
 		peerInfo:        peerInfo,
 		pieceRepository: p.NewRepo(pieceManager.PieceCount()),
+		done:            make(chan struct{}),
 	}
 	net.RegisterListener(peer)
 	return peer
@@ -137,6 +140,7 @@ func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
 		done, nextPiece := p.pieceManager.SetNext(p.peerInfo.IP)
 		log.Info(p.peerInfo.IP + ": Downloaded piece: " + fmt.Sprint(p.currentPiece))
 		if done {
+			p.Stop()
 			return true
 		}
 		p.currentPiece = nextPiece
@@ -164,31 +168,45 @@ func (p *simplePeer) send(packet Packet) {
 	p.net.Send(packet)
 }
 
-func (p *simplePeer) NewPacket(packet Packet) {
-	switch packet.ID() {
-	case keepAlaive:
-		p.onKeepAlive()
-	case choke:
-		p.onChoke()
-	case unchoke:
-		p.onUnchoke()
-	case interested:
-		p.onInterested()
-	case notInterested:
-		p.onNotInterested()
-	case have:
-		p.onHave(packet.Payload())
-	case bitfield:
-		p.onBitfield(packet.Payload())
-	case request:
-		p.onRequest(decodeRequest(packet.Payload()))
-	case piece:
-		p.onPiece(decodePiece(packet.Payload()))
-	case cancel:
-		p.onCancel()
-	case port:
-		p.onPort()
-	case unknown:
-		p.onUnknown()
+func (p *simplePeer) NewPacket(packet Packet) bool {
+	select {
+	case <-p.done:
+		return false
+
+	default:
+		switch packet.ID() {
+		case keepAlaive:
+			p.onKeepAlive()
+		case choke:
+			p.onChoke()
+		case unchoke:
+			p.onUnchoke()
+		case interested:
+			p.onInterested()
+		case notInterested:
+			p.onNotInterested()
+		case have:
+			p.onHave(packet.Payload())
+		case bitfield:
+			p.onBitfield(packet.Payload())
+		case request:
+			p.onRequest(decodeRequest(packet.Payload()))
+		case piece:
+			p.onPiece(decodePiece(packet.Payload()))
+		case cancel:
+			p.onCancel()
+		case port:
+			p.onPort()
+		case unknown:
+			p.onUnknown()
+		}
+		return true
 	}
+}
+
+func (p *simplePeer) Stop() {
+	go func() {
+		p.msgs <- kill{p.peerInfo}
+		p.done <- struct{}{}
+	}()
 }

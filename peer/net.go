@@ -28,7 +28,8 @@ type Network interface {
 // Listener defines a callback which will be invoked on every
 // incoming packet.
 type Listener interface {
-	NewPacket(Packet)
+	NewPacket(Packet) bool
+	Stop()
 }
 
 type network struct {
@@ -40,6 +41,7 @@ type network struct {
 }
 
 const dialerTimeOut = 10 * time.Second
+const timeout = 30 * time.Second
 
 // NewNetwork create Network
 func NewNetwork(peerInfo torrent.PeerInfo, handshake Handshake) Network {
@@ -53,11 +55,12 @@ func (n *network) SendHandshake() error {
 	addr := net.JoinHostPort(n.peerInfo.IP, strconv.Itoa(int(n.peerInfo.Port)))
 	dialer := net.Dialer{Timeout: dialerTimeOut}
 	conn, err := dialer.Dial("tcp", addr)
-
 	if err != nil {
 		log.Debug("Can't dial remote peer " + err.Error())
 		return err
 	}
+	//	deadline := deadline()
+	//	conn.SetReadDeadline(deadline)
 
 	handshake, err := n.hanshake.Encode()
 	if err != nil {
@@ -88,32 +91,35 @@ func (n *network) SendHandshake() error {
 	}
 	n.conn = conn
 
+	n.handleConn()
+	return nil
+}
+
+func (n *network) handleConn() {
 	go func() {
+
+		defer func() {
+			n.conn.Close()
+			n.listener.Stop()
+		}()
+
 		for {
-			err := n.handleConn()
+			deadline := deadline()
+			n.conn.SetReadDeadline(deadline)
+			packet := &packet{}
+			err := packet.Decode(n.conn)
 			if err != nil {
-				return
+				log.Info("Packet from " + n.peerInfo.IP + " can't be decoded " + err.Error())
+				break
+			}
+
+			cont := n.listener.NewPacket(packet)
+			if !cont {
+				log.Info("Disconnecting from " + n.peerInfo.IP)
+				break
 			}
 		}
 	}()
-	return nil
-}
-
-func (n *network) handleConn() error {
-	packet := &packet{}
-	err := packet.Decode(n.conn)
-	if err != nil {
-		log.Info("Packet from " + n.peerInfo.IP + " can't be decoded " + err.Error())
-		return err
-	}
-	n.dispatch(packet)
-	return nil
-}
-
-func (n *network) dispatch(p Packet) {
-	//	n.Lock()
-	//defer n.Unlock()
-	n.listener.NewPacket(p)
 }
 
 func (n *network) Send(p Packet) error {
@@ -134,4 +140,8 @@ func (n *network) Send(p Packet) error {
 
 func (n *network) RegisterListener(l Listener) {
 	n.listener = l
+}
+
+func deadline() time.Time {
+	return time.Now().Local().Add(timeout)
 }

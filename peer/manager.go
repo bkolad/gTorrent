@@ -8,7 +8,7 @@ import (
 	"github.com/bkolad/gTorrent/torrent"
 )
 
-const maxActivePeers = 30
+const maxActivePeers = 50
 
 type Manager interface {
 	ConnectToPeers()
@@ -54,10 +54,13 @@ func (m *manager) ConnectToPeers() {
 
 		for msg := range m.messages {
 			switch msg := msg.(type) {
-			case killed:
+			case kill:
 				//	close
+				// m.activePeers[msg.peerInfo].Stop()
 				delete(m.activePeers, msg.peerInfo)
 			case handshakeError:
+				// m.activePeers[msg.peerInfo].Stop()
+
 				log.Error("HandshakeError")
 			}
 		}
