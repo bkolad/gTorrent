@@ -33,11 +33,11 @@ func (p pieceStatus) empty() bool {
 }
 
 func (p pieceStatus) have() bool {
-	return p.peerID != "" && p.done
+	return !p.empty() && p.done
 }
 
 func (p pieceStatus) inProgress() bool {
-	return p.peerID != "" && !p.done
+	return !p.empty() && !p.done
 }
 
 type manager struct {
@@ -47,31 +47,21 @@ type manager struct {
 	pieces      []pieceStatus
 	peersPieces map[string][]bool
 	pieceSize   uint32
+	pieceRepo   Repository
 }
 
-func NewManager(info torrent.Info) *manager {
-	lastPieceSize, numberOfPieces := CalculateLastPieceSize(info.Length, info.PieceSize)
+func NewManager(info torrent.Info, pieceRepo Repository) *manager {
+	lastPieceSize, pieceCount := torrent.CalculateLastPieceSize(info.Length, info.PieceSize)
+	pieces := make([]pieceStatus, pieceCount)
 
-	pieces := make([]pieceStatus, numberOfPieces)
 	return &manager{
 		info:          info,
 		pieces:        pieces,
 		peersPieces:   map[string][]bool{},
 		lastPieceSize: uint32(lastPieceSize),
 		pieceSize:     uint32(info.PieceSize),
+		pieceRepo:     pieceRepo,
 	}
-}
-
-func CalculateLastPieceSize(length int, pieceSize int) (uint32, uint32) {
-	lastPieceSize := length % pieceSize
-	numberOfPieces := length / pieceSize
-
-	if lastPieceSize != 0 {
-		numberOfPieces++
-	} else {
-		lastPieceSize = pieceSize
-	}
-	return uint32(lastPieceSize), uint32(numberOfPieces)
 }
 
 func (m *manager) PieceCount() uint32 {

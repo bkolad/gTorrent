@@ -17,7 +17,7 @@ type Info struct {
 	AnnounceList [][]string
 	PieceSize    int
 	Length       int
-	name         string
+	Name         string
 	files        []file
 	PieceHashes  [][]byte
 	InfoHash     []byte
@@ -34,6 +34,18 @@ type torrentDec struct {
 }
 
 const chunkSize = 16384
+
+func CalculateLastPieceSize(length int, pieceSize int) (int, int) {
+	lastPieceSize := length % pieceSize
+	numberOfPieces := length / pieceSize
+
+	if lastPieceSize != 0 {
+		numberOfPieces++
+	} else {
+		lastPieceSize = pieceSize
+	}
+	return lastPieceSize, numberOfPieces
+}
 
 // NewTorrentDecoder returns default torrent file decoder
 // which holds the entire torrent file in memory.
@@ -124,6 +136,7 @@ func (dec *torrentDec) Decode() (*Info, error) {
 	io.WriteString(h, infoDictStr)
 	infoHash := h.Sum(nil)
 
+	//lastPieceSize, pieceCount := CalculateLastPieceSize(length, pieceLength)
 	return &Info{
 		announce,
 		announceList,

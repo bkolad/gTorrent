@@ -14,26 +14,36 @@ type Manager interface {
 	ConnectToPeers()
 }
 
+type transfer struct {
+	from   int
+	to     int
+	amount int
+	nonce  int
+}
+
 type manager struct {
-	peersInfo    chan torrent.PeerInfo
-	activePeers  map[torrent.PeerInfo]Peer
-	messages     chan MSG
-	handshake    Handshake
-	pieceManager p.Manager
+	peersInfo       chan torrent.PeerInfo
+	activePeers     map[torrent.PeerInfo]Peer
+	messages        chan MSG
+	handshake       Handshake
+	pieceManager    p.Manager
+	pieceRepository p.Repository
 }
 
 func NewManager(peersInfo chan torrent.PeerInfo,
 	handshake Handshake,
 	pieceManager p.Manager,
+	pieceRepository p.Repository,
 ) Manager {
 	activePeers := make(map[torrent.PeerInfo]Peer)
 	messages := make(chan MSG, 100)
 	return &manager{
-		peersInfo:    peersInfo,
-		activePeers:  activePeers,
-		messages:     messages,
-		handshake:    handshake,
-		pieceManager: pieceManager,
+		peersInfo:       peersInfo,
+		activePeers:     activePeers,
+		messages:        messages,
+		handshake:       handshake,
+		pieceManager:    pieceManager,
+		pieceRepository: pieceRepository,
 	}
 }
 
@@ -42,7 +52,7 @@ func (m *manager) ConnectToPeers() {
 		for p := range m.peersInfo {
 			if len(m.activePeers) < maxActivePeers {
 				log.Info("connecting to peer " + p.IP)
-				peer := newPeer(m.messages, p, m.handshake, m.pieceManager)
+				peer := newPeer(m.messages, p, m.handshake, m.pieceManager, m.pieceRepository)
 				go peer.start()
 				//TODO fix reace condition
 				m.activePeers[p] = peer

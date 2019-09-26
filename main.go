@@ -4,16 +4,22 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/bkolad/gTorrent/db"
 	i "github.com/bkolad/gTorrent/init"
 	"github.com/bkolad/gTorrent/peer"
 	"github.com/bkolad/gTorrent/piece"
+	"github.com/bkolad/gTorrent/tracker"
 
 	log "github.com/bkolad/gTorrent/logger"
 	"github.com/bkolad/gTorrent/torrent"
-	"github.com/bkolad/gTorrent/tracker"
 )
 
 func main() {
+
+	db, err := db.InitDB()
+	if err != nil {
+		panic(err)
+	}
 
 	log.Info("Starting gTorrent..")
 	conf := i.NewConf()
@@ -31,6 +37,27 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	err = saveTorrent(db, info)
+	if err != nil {
+		panic(err)
+	}
+
+	pieceRepo, err := piece.NewRepoDb(db, info)
+	if err != nil {
+		panic(err)
+	}
+
+	err = pieceRepo.Save(22, []byte("some data"))
+	if err != nil {
+		panic(err)
+	}
+	data, err = pieceRepo.Get(22)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(len(data))
+
 	fmt.Println("Pieces Length:", info.Length)
 	fmt.Println("Pieces Size:", info.PieceSize)
 	tracker, _ := tracker.NewTracker(info, initState, conf)
@@ -50,9 +77,11 @@ func main() {
 	}()
 
 	handshake := peer.NewHandshake(conf, info)
-	pieceManager := piece.NewManager(*info)
 
-	peerManager := peer.NewManager(peerInfoChan, handshake, pieceManager)
+	pieceManager := piece.NewManager(*info, nil)
+	repo := piece.NewRepo(pieceManager.PieceCount())
+
+	peerManager := peer.NewManager(peerInfoChan, handshake, pieceManager, repo)
 	go peerManager.ConnectToPeers()
 	select {}
 }

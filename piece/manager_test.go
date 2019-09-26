@@ -48,7 +48,7 @@ func tests() []testCase {
 
 func TestPeerManager(t *testing.T) {
 	for _, testCase := range tests() {
-		manager := NewManager(testCase.info)
+		manager := NewManager(testCase.info, nil)
 		require.Equal(t, int(testCase.lastPieceSize), int(manager.lastPieceSize))
 		require.Equal(t, testCase.numberOfPieces, len(manager.pieces))
 	}
@@ -61,7 +61,8 @@ func TestPeerManagerNexPiece(t *testing.T) {
 		peer2 := makePeer("peer2", testCase, 2, missing)
 		peer3 := makePeer("peer3", testCase, 3, missing)
 
-		manager := NewManager(testCase.info)
+		//	repo := nil //NewRepo(uint32(testCase.info.PieceCount))
+		manager := NewManager(testCase.info, nil)
 		manager.SetPeerPieces(peer1.peerID, peer1.pieces)
 		manager.SetPeerPieces(peer2.peerID, peer2.pieces)
 		manager.SetPeerPieces(peer3.peerID, peer3.pieces)
