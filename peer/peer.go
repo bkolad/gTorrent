@@ -35,7 +35,6 @@ type simplePeer struct {
 	chocked          bool
 	interested       bool
 	pieceManager     p.Manager
-	pieceRepository  p.Repository
 	currentPiece     uint32
 	currentPieceData []byte
 	currentOffset    uint32
@@ -47,10 +46,9 @@ func newPeer(messages chan MSG,
 	peerInfo torrent.PeerInfo,
 	handshake Handshake,
 	pieceManager p.Manager,
-	pieceRepository p.Repository,
 ) Peer {
 	net := NewNetwork(peerInfo, handshake)
-	return newPeerWithNetwork(net, messages, peerInfo, handshake, pieceManager, pieceRepository)
+	return newPeerWithNetwork(net, messages, peerInfo, handshake, pieceManager)
 }
 
 func newPeerWithNetwork(net Network,
@@ -58,15 +56,13 @@ func newPeerWithNetwork(net Network,
 	peerInfo torrent.PeerInfo,
 	handshake Handshake,
 	pieceManager p.Manager,
-	pieceRepository p.Repository,
 ) *simplePeer {
 	peer := &simplePeer{
-		msgs:            messages,
-		net:             net,
-		pieceManager:    pieceManager,
-		peerInfo:        peerInfo,
-		pieceRepository: pieceRepository,
-		done:            false,
+		msgs:         messages,
+		net:          net,
+		pieceManager: pieceManager,
+		peerInfo:     peerInfo,
+		done:         false,
 	}
 	net.RegisterListener(peer)
 	return peer
@@ -75,7 +71,7 @@ func newPeerWithNetwork(net Network,
 func (p *simplePeer) start() {
 	err := p.net.SendHandshake()
 	if err != nil {
-		fmt.Println("Err " + err.Error())
+		log.Error(err.Error())
 		p.msgs <- handshakeError{}
 	}
 }
@@ -93,7 +89,7 @@ func (p *simplePeer) onChoke() {
 func (p *simplePeer) onUnchoke() {
 	log.Debug("Unchoked")
 	p.chocked = false
-	done, next := p.pieceManager.SetNext(p.peerInfo.IP)
+	done, next := p.pieceManager.NextPiece(p.peerInfo.IP)
 	if done {
 		return
 	}
@@ -129,7 +125,7 @@ func (p *simplePeer) onBitfield(bitfield []byte) {
 func (p *simplePeer) onRequest(piece, offset, size uint32) {
 	//data, err := p.pieceRepository.Get(piece, offset, size)
 
-	pieceData, err := p.pieceRepository.Get(piece)
+	pieceData, err := p.pieceManager.Get(piece)
 	pieceChunk := pieceData[offset : offset+size]
 	if err != nil {
 		panic(err)
@@ -139,21 +135,27 @@ func (p *simplePeer) onRequest(piece, offset, size uint32) {
 }
 
 func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) {
+	if p.currentOffset != offset {
+		log.Error("Received bad offset " + p.peerInfo.IP)
+		p.stop()
+		return
+	}
 	p.currentOffset += uint32(len(payload))
 	p.currentPieceData = append(p.currentPieceData, payload...)
-	isLastChunk := p.currentOffset == p.pieceManager.PieceSize(piece)
 
-	if isLastChunk {
-
-		if !p.pieceManager.Verify(piece, p.currentPieceData) {
-			log.Error("Piece has wrong hash | Peer:" + p.peerInfo.IP)
+	if p.pieceManager.IsLastChunk(piece, p.currentOffset) {
+		err := p.pieceManager.PieceDone(piece, p.currentPieceData)
+		if err != nil {
+			log.Error("Cant save piece from " + p.peerInfo.IP)
+			log.Error(err.Error())
 			p.stop()
 			return
 		}
-		p.pieceRepository.Save(piece, p.currentPieceData)
-		done, nextPiece := p.pieceManager.SetNext(p.peerInfo.IP)
+
+		done, nextPiece := p.pieceManager.NextPiece(p.peerInfo.IP)
 		log.Info(p.peerInfo.IP + ": Downloaded piece: " + fmt.Sprint(p.currentPiece))
 		if done {
+			log.Info(p.peerInfo.IP + ": Downloading finisched")
 			p.stop()
 			return
 		}

@@ -35,14 +35,14 @@ type torrentDec struct {
 
 const chunkSize = 16384
 
-func CalculateLastPieceSize(length int, pieceSize int) (int, int) {
-	lastPieceSize := length % pieceSize
-	numberOfPieces := length / pieceSize
+func (info *Info) CalculateLastPieceSize() (int, int) {
+	lastPieceSize := info.Length % info.PieceSize
+	numberOfPieces := info.Length / info.PieceSize
 
 	if lastPieceSize != 0 {
 		numberOfPieces++
 	} else {
-		lastPieceSize = pieceSize
+		lastPieceSize = info.PieceSize
 	}
 	return lastPieceSize, numberOfPieces
 }

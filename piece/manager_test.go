@@ -60,35 +60,35 @@ func TestPeerManagerNexPiece(t *testing.T) {
 		peer1 := makePeer("peer1", testCase, 1, missing)
 		peer2 := makePeer("peer2", testCase, 2, missing)
 		peer3 := makePeer("peer3", testCase, 3, missing)
+		repo := NewRepo(uint32(testCase.numberOfPieces))
 
-		//	repo := nil //NewRepo(uint32(testCase.info.PieceCount))
-		manager := NewManager(testCase.info, nil)
+		manager := NewManager(testCase.info, repo)
 		manager.SetPeerPieces(peer1.peerID, peer1.pieces)
 		manager.SetPeerPieces(peer2.peerID, peer2.pieces)
 		manager.SetPeerPieces(peer3.peerID, peer3.pieces)
 
+		done := false
 		for i := 0; i < testCase.numberOfPieces; i++ {
-			done, next := manager.SetNext(peer1.peerID)
+			done, next := manager.NextPiece(peer1.peerID)
 			if !done {
 				require.True(t, peer1.pieces[next])
 			}
 
-			done, next = manager.SetNext(peer2.peerID)
+			done, next = manager.NextPiece(peer2.peerID)
 			if !done {
 				require.True(t, peer2.pieces[next])
 			}
 
-			done, next = manager.SetNext(peer3.peerID)
+			done, next = manager.NextPiece(peer3.peerID)
 			if !done {
 				require.True(t, peer3.pieces[next])
-				manager.SetDone(next, []byte{})
 			}
 		}
-		done, _ := manager.SetNext(peer1.peerID)
+		done, _ = manager.NextPiece(peer1.peerID)
 		require.True(t, done)
-		done, _ = manager.SetNext(peer2.peerID)
+		done, _ = manager.NextPiece(peer2.peerID)
 		require.True(t, done)
-		done, _ = manager.SetNext(peer3.peerID)
+		done, _ = manager.NextPiece(peer3.peerID)
 		require.True(t, done)
 
 		if missing < testCase.numberOfPieces {

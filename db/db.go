@@ -15,10 +15,12 @@ const (
 	dbname = "galaxy_db"
 )
 
+// DB represents sql database
 type DB struct {
 	*sql.DB
 }
 
+// InitDB inits DB and creates db schemas (if already not exists)
 func InitDB() (*DB, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"dbname=%s sslmode=disable",
