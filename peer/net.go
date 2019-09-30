@@ -29,7 +29,7 @@ type Network interface {
 // incoming packet.
 type Listener interface {
 	NewPacket(Packet) bool
-	Stop()
+	stop()
 }
 
 type network struct {
@@ -100,7 +100,7 @@ func (n *network) handleConn() {
 
 		defer func() {
 			n.conn.Close()
-			n.listener.Stop()
+			n.listener.stop()
 		}()
 
 		for {
@@ -113,8 +113,8 @@ func (n *network) handleConn() {
 				break
 			}
 
-			cont := n.listener.NewPacket(packet)
-			if !cont {
+			done := n.listener.NewPacket(packet)
+			if done {
 				log.Info("Disconnecting from " + n.peerInfo.IP)
 				break
 			}

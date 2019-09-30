@@ -1,58 +1,39 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-
+	"github.com/bkolad/gTorrent/db"
 	i "github.com/bkolad/gTorrent/init"
-	"github.com/bkolad/gTorrent/peer"
-	"github.com/bkolad/gTorrent/piece"
 
 	log "github.com/bkolad/gTorrent/logger"
-	"github.com/bkolad/gTorrent/torrent"
-	"github.com/bkolad/gTorrent/tracker"
 )
 
 func main() {
+	db, err := db.InitDB()
+	if err != nil {
+		panic(err)
+	}
 
 	log.Info("Starting gTorrent..")
 	conf := i.NewConf()
 	initState := i.NewInitState()
 	log.Debug("Local peer ID: " + conf.PeerID)
 
-	data, err := ioutil.ReadFile(conf.TorrentPath)
+	galaxy, err := newGalaxy(db, initState, conf)
 	if err != nil {
-		fmt.Println("File reading error", err)
-		return
-	}
-	dec := torrent.NewTorrentDecoder(string(data))
-	info, err := dec.Decode()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println("Pieces Length:", info.Length)
-	fmt.Println("Pieces Size:", info.PieceSize)
-	tracker, _ := tracker.NewTracker(info, initState, conf)
-
-	peers, err := tracker.Peers()
-	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 
-	peerInfoChan := make(chan torrent.PeerInfo, 100)
+	err = galaxy.saveTorrent()
+	if err != nil {
+		panic(err)
+	}
+
 	go func() {
-		for _, peer := range peers {
-			peerInfoChan <- peer
-		}
-		close(peerInfoChan)
+		galaxy.retrievePeersFromTracker()
 	}()
 
-	handshake := peer.NewHandshake(conf, info)
-	pieceManager := piece.NewManager(*info)
-
-	peerManager := peer.NewManager(peerInfoChan, handshake, pieceManager)
-	go peerManager.ConnectToPeers()
+	go func() {
+		galaxy.connectToPeers()
+	}()
 	select {}
 }

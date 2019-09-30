@@ -1,17 +1,22 @@
 package peer
 
 import (
-	"fmt"
-
 	log "github.com/bkolad/gTorrent/logger"
 	p "github.com/bkolad/gTorrent/piece"
 	"github.com/bkolad/gTorrent/torrent"
 )
 
-const maxActivePeers = 50
+const maxActivePeers = 10
 
 type Manager interface {
 	ConnectToPeers()
+}
+
+type transfer struct {
+	from   int
+	to     int
+	amount int
+	nonce  int
 }
 
 type manager struct {
@@ -46,7 +51,7 @@ func (m *manager) ConnectToPeers() {
 				go peer.start()
 				//TODO fix reace condition
 				m.activePeers[p] = peer
-				fmt.Println(m.activePeers[p])
+				//		fmt.Println(m.activePeers[p])
 			} else {
 				break
 			}
@@ -60,7 +65,6 @@ func (m *manager) ConnectToPeers() {
 				delete(m.activePeers, msg.peerInfo)
 			case handshakeError:
 				// m.activePeers[msg.peerInfo].Stop()
-
 				log.Error("HandshakeError")
 			}
 		}

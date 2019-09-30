@@ -22,11 +22,11 @@ type Peer interface {
 	onHave([]byte)
 	onBitfield([]byte)
 	onRequest(uint32, uint32, uint32)
-	onPiece(uint32, uint32, []byte) bool
+	onPiece(uint32, uint32, []byte)
 	onCancel()
 	onPort()
 	onUnknown()
-	Stop()
+	stop()
 }
 
 type simplePeer struct {
@@ -35,12 +35,11 @@ type simplePeer struct {
 	chocked          bool
 	interested       bool
 	pieceManager     p.Manager
-	pieceRepository  p.Repository
 	currentPiece     uint32
 	currentPieceData []byte
 	currentOffset    uint32
 	peerInfo         torrent.PeerInfo
-	done             chan struct{}
+	done             bool
 }
 
 func newPeer(messages chan MSG,
@@ -59,12 +58,11 @@ func newPeerWithNetwork(net Network,
 	pieceManager p.Manager,
 ) *simplePeer {
 	peer := &simplePeer{
-		msgs:            messages,
-		net:             net,
-		pieceManager:    pieceManager,
-		peerInfo:        peerInfo,
-		pieceRepository: p.NewRepo(pieceManager.PieceCount()),
-		done:            make(chan struct{}),
+		msgs:         messages,
+		net:          net,
+		pieceManager: pieceManager,
+		peerInfo:     peerInfo,
+		done:         false,
 	}
 	net.RegisterListener(peer)
 	return peer
@@ -73,7 +71,7 @@ func newPeerWithNetwork(net Network,
 func (p *simplePeer) start() {
 	err := p.net.SendHandshake()
 	if err != nil {
-		fmt.Println("Err " + err.Error())
+		log.Error(err.Error())
 		p.msgs <- handshakeError{}
 	}
 }
@@ -91,7 +89,7 @@ func (p *simplePeer) onChoke() {
 func (p *simplePeer) onUnchoke() {
 	log.Debug("Unchoked")
 	p.chocked = false
-	done, next := p.pieceManager.SetNext(p.peerInfo.IP)
+	done, next := p.pieceManager.NextPiece(p.peerInfo.IP)
 	if done {
 		return
 	}
@@ -125,27 +123,41 @@ func (p *simplePeer) onBitfield(bitfield []byte) {
 }
 
 func (p *simplePeer) onRequest(piece, offset, size uint32) {
-	data := p.pieceRepository.Get(piece, offset, size)
-	packet := encodePieceData(piece, offset, data)
+	//data, err := p.pieceRepository.Get(piece, offset, size)
+
+	pieceData, err := p.pieceManager.Get(piece)
+	pieceChunk := pieceData[offset : offset+size]
+	if err != nil {
+		panic(err)
+	}
+	packet := encodePieceData(piece, offset, pieceChunk)
 	p.send(packet)
 }
 
-func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
+func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) {
+	if p.currentOffset != offset {
+		log.Error("Received bad offset " + p.peerInfo.IP)
+		p.stop()
+		return
+	}
 	p.currentOffset += uint32(len(payload))
 	p.currentPieceData = append(p.currentPieceData, payload...)
 
-	isLastChunk := p.currentOffset == p.pieceManager.PieceSize(piece)
-	if isLastChunk {
-		if !p.pieceManager.Verify(piece, p.currentPieceData) {
-			log.Error("Piece has wrong hash | Peer:" + p.peerInfo.IP)
-			return true
+	if p.pieceManager.IsLastChunk(piece, p.currentOffset) {
+		err := p.pieceManager.PieceDone(piece, p.currentPieceData)
+		if err != nil {
+			log.Error("Cant save piece from " + p.peerInfo.IP)
+			log.Error(err.Error())
+			p.stop()
+			return
 		}
-		p.pieceRepository.Save(piece, p.currentPieceData)
-		done, nextPiece := p.pieceManager.SetNext(p.peerInfo.IP)
+
+		done, nextPiece := p.pieceManager.NextPiece(p.peerInfo.IP)
 		log.Info(p.peerInfo.IP + ": Downloaded piece: " + fmt.Sprint(p.currentPiece))
 		if done {
-			p.Stop()
-			return true
+			log.Info(p.peerInfo.IP + ": Downloading finisched")
+			p.stop()
+			return
 		}
 		p.currentPiece = nextPiece
 		p.currentPieceData = make([]byte, 0)
@@ -153,7 +165,6 @@ func (p *simplePeer) onPiece(piece, offset uint32, payload []byte) bool {
 	}
 	packet := encodePieceRequest(p.currentPiece, p.currentOffset, p.pieceManager.ChunkSize())
 	p.send(packet)
-	return false
 }
 
 func (p *simplePeer) onCancel() {
@@ -173,44 +184,42 @@ func (p *simplePeer) send(packet Packet) {
 }
 
 func (p *simplePeer) NewPacket(packet Packet) bool {
-	select {
-	case <-p.done:
-		return false
-
-	default:
-		switch packet.ID() {
-		case keepAlaive:
-			p.onKeepAlive()
-		case choke:
-			p.onChoke()
-		case unchoke:
-			p.onUnchoke()
-		case interested:
-			p.onInterested()
-		case notInterested:
-			p.onNotInterested()
-		case have:
-			p.onHave(packet.Payload())
-		case bitfield:
-			p.onBitfield(packet.Payload())
-		case request:
-			p.onRequest(decodeRequest(packet.Payload()))
-		case piece:
-			p.onPiece(decodePiece(packet.Payload()))
-		case cancel:
-			p.onCancel()
-		case port:
-			p.onPort()
-		case unknown:
-			p.onUnknown()
-		}
+	if p.done {
 		return true
 	}
+
+	switch packet.ID() {
+	case keepAlaive:
+		p.onKeepAlive()
+	case choke:
+		p.onChoke()
+	case unchoke:
+		p.onUnchoke()
+	case interested:
+		p.onInterested()
+	case notInterested:
+		p.onNotInterested()
+	case have:
+		p.onHave(packet.Payload())
+	case bitfield:
+		p.onBitfield(packet.Payload())
+	case request:
+		p.onRequest(decodeRequest(packet.Payload()))
+	case piece:
+		p.onPiece(decodePiece(packet.Payload()))
+	case cancel:
+		p.onCancel()
+	case port:
+		p.onPort()
+	case unknown:
+		p.onUnknown()
+	}
+	return false
 }
 
-func (p *simplePeer) Stop() {
+func (p *simplePeer) stop() {
 	go func() {
 		p.msgs <- kill{p.peerInfo}
-		p.done <- struct{}{}
 	}()
+	p.done = true
 }

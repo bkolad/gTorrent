@@ -36,7 +36,7 @@ func info() *Info {
 	info.InfoHash =
 		[]byte{98, 194, 202, 18, 139, 80, 209, 76, 165,
 			195, 230, 13, 19, 178, 186, 49, 28, 102, 203, 88}
-	info.name = "ubuntu-15.10-desktop-amd64.iso"
+	info.Name = "ubuntu-15.10-desktop-amd64.iso"
 	var pieceHashe []byte
 	for i := 0; i < 20; i++ {
 		pieceHashe = append(pieceHashe, 97)
